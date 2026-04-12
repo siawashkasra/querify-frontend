@@ -1,7 +1,7 @@
 "use client"
 
 import { ChevronDown } from "lucide-react"
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import { cn } from "@/lib/cn"
 import KPICards from "./KPICards"
 import DataTable from "./DataTable"
@@ -9,6 +9,14 @@ import SQLDisclosure from "./SQLDisclosure"
 import ResultFooter from "./ResultFooter"
 import QueryChart from "./QueryChart"
 import type { QueryResult } from "@/types"
+
+function toRowObjects(columns: string[], rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((r) => {
+    if (r && typeof r === "object" && !Array.isArray(r)) return r as Record<string, unknown>
+    const arr = Array.isArray(r) ? r : []
+    return Object.fromEntries(columns.map((col, i) => [col, arr[i] ?? null]))
+  })
+}
 
 interface ResultCardProps {
   result: QueryResult
@@ -20,6 +28,7 @@ export const ResultCard = ({ result, onFollowUp }: ResultCardProps) => {
   const hasKPIs = result.kpi_cards && result.kpi_cards.length > 0
   const hasTable = result.columns?.length > 0 && result.rows?.length > 0
   const hasAssumptions = result.assumptions && result.assumptions.length > 0
+  const rowObjects = useMemo(() => hasTable ? toRowObjects(result.columns, result.rows) : [], [result.columns, result.rows, hasTable])
 
   return (
     <div data-testid="result-card" className="flex flex-col gap-3">
@@ -52,10 +61,10 @@ export const ResultCard = ({ result, onFollowUp }: ResultCardProps) => {
       )}
 
       {result.chart_config && (
-        <QueryChart config={result.chart_config} rows={result.rows ?? []} />
+        <QueryChart config={result.chart_config} rows={rowObjects} />
       )}
 
-      {hasTable && <DataTable columns={result.columns} rows={result.rows} />}
+      {hasTable && <DataTable columns={result.columns} rows={rowObjects} />}
 
       {result.sql && <SQLDisclosure sql={result.sql} />}
 
