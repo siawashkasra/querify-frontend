@@ -18,7 +18,7 @@ const NEW_SESSION_KEY = "__new__"
 export default function NewChatPage() {
   const router = useRouter()
   const { activeConnectionId } = useAppStore()
-  const { threads, addUserMessage, addLoadingMessage, resolveMessage, rejectMessage } = useChatStore()
+  const { threads, addUserMessage, addLoadingMessage, resolveMessage, rejectMessage, migrateThread } = useChatStore()
   const { getSignal, cancel } = useAbortController()
   const [loading, setLoading] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -46,6 +46,7 @@ export default function NewChatPage() {
 
     try {
       const resolvedSession = await ensureSession(activeConnectionId)
+      if (resolvedSession !== sid) migrateThread(sid, resolvedSession)
       const signal = getSignal()
       const result = await queryApi.execute({ prompt, session_id: resolvedSession, connection_id: activeConnectionId }, signal) as QueryResult
       resolveMessage(resolvedSession, loadingId, result)

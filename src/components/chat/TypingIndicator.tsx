@@ -19,7 +19,7 @@ export const TypingIndicator = () => {
   }, [])
 
   return (
-    <div className="flex items-start gap-3 py-3">
+    <div data-testid="typing-indicator" className="flex items-start gap-3 py-3">
       <div className="flex items-center justify-center h-7 w-7 rounded-full bg-[var(--surface-3)] border border-[var(--border)] shrink-0 mt-0.5">
         <span className="text-xs font-bold text-brand">Q</span>
       </div>

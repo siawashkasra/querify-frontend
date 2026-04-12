@@ -108,8 +108,9 @@ export const StepDetails = ({ form, onChange, onTestSuccess, testPassed, onNext 
       />
 
       <div className="flex flex-col gap-1.5 w-full">
-        <label className="text-xs font-medium text-[var(--text-dim)]">Database type</label>
+        <label htmlFor="db_type" className="text-xs font-medium text-[var(--text-dim)]">Database type</label>
         <select
+          id="db_type"
           value={form.db_type}
           onChange={(e) => onChange({ db_type: e.target.value })}
           className="w-full h-9 px-3 rounded text-sm bg-surface text-[var(--text)] border border-[var(--border)] outline-none focus:ring-2 focus:ring-brand-mid"
@@ -160,9 +161,10 @@ export const StepDetails = ({ form, onChange, onTestSuccess, testPassed, onNext 
       />
 
       <div className="flex flex-col gap-1.5 w-full">
-        <label className="text-xs font-medium text-[var(--text-dim)]">Password</label>
+        <label htmlFor="password" className="text-xs font-medium text-[var(--text-dim)]">Password</label>
         <div className="relative">
           <input
+            id="password"
             type={showPassword ? "text" : "password"}
             value={form.password}
             onChange={(e) => { onChange({ password: e.target.value }); setTestState("idle") }}
@@ -188,8 +190,9 @@ export const StepDetails = ({ form, onChange, onTestSuccess, testPassed, onNext 
       </div>
 
       <div className="flex flex-col gap-1.5 w-full">
-        <label className="text-xs font-medium text-[var(--text-dim)]">SSL mode</label>
+        <label htmlFor="ssl_mode" className="text-xs font-medium text-[var(--text-dim)]">SSL mode</label>
         <select
+          id="ssl_mode"
           value={form.ssl_mode}
           onChange={(e) => onChange({ ssl_mode: e.target.value })}
           className="w-full h-9 px-3 rounded text-sm bg-surface text-[var(--text)] border border-[var(--border)] outline-none focus:ring-2 focus:ring-brand-mid"

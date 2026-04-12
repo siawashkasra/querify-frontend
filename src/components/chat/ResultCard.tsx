@@ -22,7 +22,7 @@ export const ResultCard = ({ result, onFollowUp }: ResultCardProps) => {
   const hasAssumptions = result.assumptions && result.assumptions.length > 0
 
   return (
-    <div className="flex flex-col gap-3">
+    <div data-testid="result-card" className="flex flex-col gap-3">
       {hasKPIs && <KPICards cards={result.kpi_cards} />}
 
       {result.summary && (

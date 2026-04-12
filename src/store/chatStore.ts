@@ -19,6 +19,7 @@ interface ChatState {
   addLoadingMessage: (sessionId: string) => string
   resolveMessage: (sessionId: string, tempId: string, result: QueryResult) => void
   rejectMessage: (sessionId: string, tempId: string, error: string, errorType?: string | null, errorDetail?: string | null) => void
+  migrateThread: (from: string, to: string) => void
   clearThread: (sessionId: string) => void
 }
 
@@ -70,6 +71,15 @@ export const useChatStore = create<ChatState>((set) => ({
         ),
       },
     }))
+  },
+
+  migrateThread: (from, to) => {
+    set((s) => {
+      const msgs = s.threads[from]
+      if (!msgs?.length) return s
+      const { [from]: _, ...rest } = s.threads
+      return { threads: { ...rest, [to]: [...(rest[to] ?? []), ...msgs] } }
+    })
   },
 
   clearThread: (sessionId) => {
