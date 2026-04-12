@@ -21,6 +21,7 @@ interface ChatState {
   rejectMessage: (sessionId: string, tempId: string, error: string, errorType?: string | null, errorDetail?: string | null) => void
   migrateThread: (from: string, to: string) => void
   clearThread: (sessionId: string) => void
+  loadThread: (sessionId: string, messages: ThreadMessage[]) => void
 }
 
 let _counter = 0
@@ -84,5 +85,9 @@ export const useChatStore = create<ChatState>((set) => ({
 
   clearThread: (sessionId) => {
     set((s) => ({ threads: { ...s.threads, [sessionId]: [] } }))
+  },
+
+  loadThread: (sessionId, messages) => {
+    set((s) => ({ threads: { ...s.threads, [sessionId]: messages } }))
   },
 }))
