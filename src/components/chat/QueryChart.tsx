@@ -80,10 +80,11 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
   const { type, x_field, y_field, title } = config
 
   const data = useMemo(() => {
+    const filtered = rows.filter((row) => row[y_field] != null)
     const isDate = isDateCol(x_field)
-    const rawXValues = isDate ? rows.map((r) => String(r[x_field] ?? "")).filter(Boolean) : []
+    const rawXValues = isDate ? filtered.map((r) => String(r[x_field] ?? "")).filter(Boolean) : []
     const dateFmt = isDate ? pickDateFormat(rawXValues) : ""
-    return rows.map((row) => {
+    return filtered.map((row) => {
       const xRaw = row[x_field]
       let xVal: string
       if (isDate && typeof xRaw === "string") {
@@ -93,7 +94,7 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
         xVal = String(xRaw ?? "")
       }
       const yRaw = row[y_field]
-      const yVal = yRaw != null && !isNaN(Number(yRaw)) ? parseFloat(String(yRaw)) : yRaw
+      const yVal = !isNaN(Number(yRaw)) ? parseFloat(String(yRaw)) : yRaw
       return { [x_field]: xVal, [y_field]: yVal }
     })
   }, [rows, x_field, y_field])

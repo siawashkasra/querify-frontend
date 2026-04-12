@@ -26,7 +26,7 @@ function detectType(colName: string, rows: Record<string, unknown>[]): ColType {
 }
 
 function formatCell(value: unknown, type: ColType): React.ReactNode {
-  if (value == null) return <span className="text-[var(--text-muted)] italic">null</span>
+  if (value == null) return <span className="text-[var(--text-muted)]">—</span>
   switch (type) {
     case "number": {
       const n = typeof value === "number" ? value : Number(value)
@@ -65,17 +65,18 @@ function humanize(col: string): string {
 const columnHelper = createColumnHelper<Record<string, unknown>>()
 
 export const DataTable = ({ columns, rows }: DataTableProps) => {
-  const types = useMemo(() => Object.fromEntries(columns.map((c) => [c, detectType(c, rows)])), [columns, rows])
+  const visibleCols = useMemo(() => columns.filter((col) => rows.some((r) => r[col] != null)), [columns, rows])
+  const types = useMemo(() => Object.fromEntries(visibleCols.map((c) => [c, detectType(c, rows)])), [visibleCols, rows])
 
   const tableColumns = useMemo(
-    () => columns.map((col) =>
+    () => visibleCols.map((col) =>
       columnHelper.accessor((row) => row[col], {
         id: col,
         header: humanize(col),
         cell: (info) => formatCell(info.getValue(), types[col]),
       })
     ),
-    [columns, types]
+    [visibleCols, types]
   )
 
   const table = useReactTable({ data: rows, columns: tableColumns, getCoreRowModel: getCoreRowModel() })
