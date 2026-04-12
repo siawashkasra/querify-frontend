@@ -84,9 +84,9 @@ export interface KPICard {
 }
 
 export interface ChartConfig {
-  type: "bar" | "line" | "area" | "pie" | "horizontal_bar" | "scatter"
-  x_axis: string
-  y_axis: string
+  type: "bar" | "line" | "area" | "pie" | "bar_horizontal" | "scatter"
+  x_field: string
+  y_field: string
   title?: string | null
 }
 

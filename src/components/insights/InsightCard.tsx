@@ -27,7 +27,7 @@ const CONFIDENCE_CONFIG = {
 
 function MiniChart({ insight }: { insight: Insight }) {
   if (!insight.chart_config || !insight.data_snapshot) return null
-  const { type, x_axis, y_axis } = insight.chart_config
+  const { type, x_field, y_field } = insight.chart_config
   const rawRows = Array.isArray(insight.data_snapshot?.rows) ? insight.data_snapshot.rows as Record<string, unknown>[] : []
   if (rawRows.length < 2) return null
 
@@ -39,7 +39,7 @@ function MiniChart({ insight }: { insight: Insight }) {
       <ResponsiveContainer width="100%" height={120}>
         {type === "bar" ? (
           <BarChart {...common} barSize={12}>
-            <Bar dataKey={y_axis} fill={color} radius={[2, 2, 0, 0]} />
+            <Bar dataKey={y_field} fill={color} radius={[2, 2, 0, 0]} />
           </BarChart>
         ) : type === "area" ? (
           <AreaChart {...common}>
@@ -49,11 +49,11 @@ function MiniChart({ insight }: { insight: Insight }) {
                 <stop offset="95%" stopColor={color} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <Area dataKey={y_axis} stroke={color} strokeWidth={1.5} fill={`url(#mg-${insight.id})`} type="monotone" dot={false} />
+            <Area dataKey={y_field} stroke={color} strokeWidth={1.5} fill={`url(#mg-${insight.id})`} type="monotone" dot={false} />
           </AreaChart>
         ) : (
           <LineChart {...common}>
-            <Line dataKey={y_axis} stroke={color} strokeWidth={1.5} dot={false} type="monotone" />
+            <Line dataKey={y_field} stroke={color} strokeWidth={1.5} dot={false} type="monotone" />
           </LineChart>
         )}
       </ResponsiveContainer>

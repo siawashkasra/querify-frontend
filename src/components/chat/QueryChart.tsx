@@ -67,23 +67,23 @@ interface QueryChartProps {
 }
 
 export const QueryChart = ({ config, rows }: QueryChartProps) => {
-  const { type, x_axis, y_axis, title } = config
+  const { type, x_field, y_field, title } = config
 
   const data = useMemo(() => rows.map((row) => {
-    const xRaw = row[x_axis]
+    const xRaw = row[x_field]
     let xVal: string
-    if (isDateCol(x_axis) && typeof xRaw === "string") {
+    if (isDateCol(x_field) && typeof xRaw === "string") {
       const parsed = parseISO(xRaw)
       xVal = isValid(parsed) ? formatDate(parsed, "MMM yyyy") : String(xRaw)
     } else {
       xVal = String(xRaw ?? "")
     }
-    const yRaw = row[y_axis]
+    const yRaw = row[y_field]
     const yVal = yRaw != null && !isNaN(Number(yRaw)) ? parseFloat(String(yRaw)) : yRaw
-    return { [x_axis]: xVal, [y_axis]: yVal }
-  }), [rows, x_axis, y_axis])
+    return { [x_field]: xVal, [y_field]: yVal }
+  }), [rows, x_field, y_field])
 
-  const TooltipContent = useMemo(() => makeTooltip(y_axis), [y_axis])
+  const TooltipContent = useMemo(() => makeTooltip(y_field), [y_field])
 
   if (data.length < 2) {
     return (
@@ -95,7 +95,7 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
 
   const sharedGridProps = { stroke: "var(--border)", strokeDasharray: "3 3", vertical: false }
   const sharedXProps = {
-    dataKey: x_axis,
+    dataKey: x_field,
     tick: { fill: "var(--text-muted)", fontFamily: "IBM Plex Mono", fontSize: 11 },
     tickLine: false,
     axisLine: { stroke: "var(--border)" },
@@ -121,7 +121,19 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
             <XAxis {...sharedXProps} />
             <YAxis {...sharedYProps} />
             {tooltipEl}
-            <Bar dataKey={y_axis} fill={BRAND_DARK} radius={[4, 4, 0, 0]} activeBar={{ fill: BRAND_MID }} />
+            <Bar dataKey={y_field} fill={BRAND_DARK} radius={[4, 4, 0, 0]} activeBar={{ fill: BRAND_MID }} />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+
+      {type === "bar_horizontal" && (
+        <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+          <BarChart data={data} layout="vertical" barSize={20}>
+            <CartesianGrid {...sharedGridProps} horizontal={false} vertical={false} />
+            <XAxis type="number" tick={{ fill: "var(--text-muted)", fontFamily: "IBM Plex Mono", fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={formatAxisValue} />
+            <YAxis type="category" dataKey={x_field} tick={{ fill: "var(--text-muted)", fontFamily: "IBM Plex Mono", fontSize: 11 }} tickLine={false} axisLine={false} width={100} tickFormatter={(v: unknown) => truncate(String(v), 14)} />
+            {tooltipEl}
+            <Bar dataKey={y_field} fill={BRAND_DARK} radius={[0, 4, 4, 0]} activeBar={{ fill: BRAND_MID }} />
           </BarChart>
         </ResponsiveContainer>
       )}
@@ -133,7 +145,7 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
             <XAxis {...sharedXProps} />
             <YAxis {...sharedYProps} />
             {tooltipEl}
-            <Line dataKey={y_axis} stroke={BRAND} strokeWidth={2} dot={false} type="monotone" activeDot={{ r: 4, fill: BRAND }} />
+            <Line dataKey={y_field} stroke={BRAND} strokeWidth={2} dot={false} type="monotone" activeDot={{ r: 4, fill: BRAND }} />
           </LineChart>
         </ResponsiveContainer>
       )}
@@ -151,12 +163,12 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
             <XAxis {...sharedXProps} />
             <YAxis {...sharedYProps} />
             {tooltipEl}
-            <Area dataKey={y_axis} stroke={BRAND} strokeWidth={2} fill="url(#brandGradient)" type="monotone" dot={false} activeDot={{ r: 4, fill: BRAND }} />
+            <Area dataKey={y_field} stroke={BRAND} strokeWidth={2} fill="url(#brandGradient)" type="monotone" dot={false} activeDot={{ r: 4, fill: BRAND }} />
           </AreaChart>
         </ResponsiveContainer>
       )}
 
-      {type !== "bar" && type !== "line" && type !== "area" && (
+      {type !== "bar" && type !== "bar_horizontal" && type !== "line" && type !== "area" && (
         <p className="text-xs text-[var(--text-muted)] py-2">
           Chart type &quot;{type}&quot; is not supported yet.
         </p>
