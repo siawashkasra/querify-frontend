@@ -56,7 +56,7 @@ export const Sidebar = () => {
                 sidebarCollapsed && "justify-center px-0 py-2.5",
                 isActive
                   ? "bg-brand text-white"
-                  : "text-[var(--text-dim)] hover:text-brand-light hover:bg-surface-2"
+                  : "text-[var(--text-dim)] hover:text-brand hover:bg-[var(--brand-light)]"
               )}
               title={sidebarCollapsed ? label : undefined}
             >
@@ -80,7 +80,7 @@ export const Sidebar = () => {
           </div>
         ) : (
           !sidebarCollapsed && (
-            <Link href="/settings/connections/new" className="flex items-center gap-2 px-3 py-2 rounded text-xs text-[var(--text-muted)] hover:text-brand-light hover:bg-surface-2 transition-colors">
+            <Link href="/settings/connections/new" className="flex items-center gap-2 px-3 py-2 rounded text-xs text-[var(--text-muted)] hover:text-brand hover:bg-[var(--brand-light)] transition-colors">
               <Database size={14} className="shrink-0" />
               Connect a database
             </Link>
