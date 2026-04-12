@@ -118,7 +118,7 @@ export interface QueryResult {
   chart_config: ChartConfig | null
   kpi_cards: KPICard[]
   columns: string[]
-  rows: unknown[][]
+  rows: Record<string, unknown>[]
   assumptions: string[]
   error_type: string | null
   message: string | null

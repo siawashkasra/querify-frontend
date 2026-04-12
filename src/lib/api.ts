@@ -33,13 +33,11 @@ http.interceptors.response.use(
   }
 )
 
-type ApiInstance = typeof http
-
 const get = <T>(url: string, params?: Record<string, unknown>) =>
   (http as unknown as { get: (url: string, cfg: object) => Promise<T> }).get(url, { params })
 
-const post = <T>(url: string, data?: unknown) =>
-  (http as unknown as { post: (url: string, data: unknown) => Promise<T> }).post(url, data)
+const post = <T>(url: string, data?: unknown, signal?: AbortSignal) =>
+  (http as unknown as { post: (url: string, data: unknown, cfg?: object) => Promise<T> }).post(url, data, signal ? { signal } : undefined)
 
 const del = <T>(url: string) =>
   (http as unknown as { delete: (url: string) => Promise<T> }).delete(url)
@@ -72,8 +70,8 @@ export const connections = {
 }
 
 export const query = {
-  execute: (data: { prompt: string; connection_id: string; session_id?: string }) =>
-    post<QueryResult>("/api/v1/query/execute", data),
+  execute: (data: { prompt: string; connection_id: string; session_id?: string }, signal?: AbortSignal) =>
+    post<QueryResult>("/api/v1/query/execute", data, signal),
   history: (params: {
     connection_id?: string
     session_id?: string

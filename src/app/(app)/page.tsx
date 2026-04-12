@@ -120,7 +120,7 @@ export default function DashboardPage() {
 
   if (!hasConnections) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="h-full overflow-y-auto flex items-center justify-center min-h-[60vh]">
         <EmptyState
           icon={Database}
           heading="Connect your first database"
@@ -134,7 +134,8 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="h-full overflow-y-auto p-6">
+    <div className="flex flex-col gap-8 max-w-5xl mx-auto">
       {degradedConns.map((c) => <DegradedBanner key={c.id} name={c.name} id={c.id} />)}
 
       <div className="flex items-start justify-between gap-4">
@@ -276,6 +277,7 @@ export default function DashboardPage() {
           </div>
         )}
       </section>
+    </div>
     </div>
   )
 }
