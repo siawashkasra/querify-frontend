@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { formatDistanceToNow } from "date-fns"
 import { RotateCcw, AlertTriangle, RefreshCw } from "lucide-react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useState } from "react"
 import { useAppStore } from "@/store/appStore"
 import { connections, query as queryApi, insights as insightsApi } from "@/lib/api"
 import { cn } from "@/lib/cn"
@@ -13,6 +14,8 @@ import Button from "@/components/ui/Button"
 import { SkeletonCard, SkeletonRow, SkeletonInsightCard } from "@/components/ui/Skeleton"
 import EmptyState from "@/components/ui/EmptyState"
 import ConnectionCard from "@/components/connections/ConnectionCard"
+import InsightCard from "@/components/insights/InsightCard"
+import InsightModal from "@/components/insights/InsightModal"
 import { useGreeting } from "@/hooks/useGreeting"
 import { Database, Plus, MessageSquarePlus } from "lucide-react"
 import type { Connection, ChatMessage, Insight } from "@/types"
@@ -55,6 +58,7 @@ export default function DashboardPage() {
   const qc = useQueryClient()
   const greeting = useGreeting()
   const { activeConnectionId, setActiveConnection } = useAppStore()
+  const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null)
 
   const { data: allConnections, isLoading: loadingConns, error: connsError, refetch: refetchConns } =
     useQuery<Connection[]>({
@@ -134,6 +138,7 @@ export default function DashboardPage() {
   }
 
   return (
+    <>
     <div className="h-full overflow-y-auto p-6">
     <div className="flex flex-col gap-8 max-w-5xl mx-auto">
       {degradedConns.map((c) => <DegradedBanner key={c.id} name={c.name} id={c.id} />)}
@@ -198,6 +203,7 @@ export default function DashboardPage() {
         <section className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">From your data</h3>
+            <Link href="/insights" className="text-xs text-brand hover:underline">See all insights</Link>
           </div>
           {loadingInsights ? (
             <div className="flex gap-4 overflow-x-auto pb-1">
@@ -206,20 +212,13 @@ export default function DashboardPage() {
           ) : insightsError ? (
             <SectionError label="insights" onRetry={refetchInsights} />
           ) : !insights?.length ? (
-            <p className="text-xs text-[var(--text-muted)]">No insights yet. Run some queries to generate insights.</p>
+            <p className="text-xs text-[var(--text-muted)]">
+              Insights are generated automatically. Check back after your database has been connected for a few hours.
+            </p>
           ) : (
             <div className="flex gap-4 overflow-x-auto pb-1">
               {insights.slice(0, 3).map((ins) => (
-                <div key={ins.id} className="rounded-lg border border-[var(--border)] bg-surface-2 p-4 flex flex-col gap-2 min-w-[220px] max-w-[260px] shrink-0">
-                  <Badge variant={ins.severity === "critical" ? "degraded" : ins.severity === "warning" ? "pending" : "active"}>
-                    {ins.severity}
-                  </Badge>
-                  <p className="text-sm text-[var(--text)] leading-snug">{ins.title}</p>
-                  <p className="text-xs text-[var(--text-muted)] line-clamp-2">{ins.description}</p>
-                  <span className="text-xs text-[var(--text-muted)] mt-auto">
-                    {formatDistanceToNow(new Date(ins.created_at), { addSuffix: true })}
-                  </span>
-                </div>
+                <InsightCard key={ins.id} insight={ins} onOpenModal={setSelectedInsight} compact />
               ))}
             </div>
           )}
@@ -279,5 +278,8 @@ export default function DashboardPage() {
       </section>
     </div>
     </div>
+
+    <InsightModal insight={selectedInsight} onClose={() => setSelectedInsight(null)} />
+    </>
   )
 }

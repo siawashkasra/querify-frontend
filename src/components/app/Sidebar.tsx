@@ -2,13 +2,13 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, MessageSquarePlus, Clock, Settings, Database, ChevronLeft, ChevronRight } from "lucide-react"
+import { LayoutDashboard, MessageSquarePlus, Clock, Settings, Database, ChevronLeft, ChevronRight, Sparkles } from "lucide-react"
 import { clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { useAppStore } from "@/store/appStore"
 import { useQuery } from "@tanstack/react-query"
-import { connections } from "@/lib/api"
-import type { Connection } from "@/types"
+import { connections, insights as insightsApi } from "@/lib/api"
+import type { Connection, Insight } from "@/types"
 
 const cn = (...inputs: Parameters<typeof clsx>) => twMerge(clsx(inputs))
 
@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/" },
   { label: "New Chat", icon: MessageSquarePlus, href: "/chat/new" },
   { label: "History", icon: Clock, href: "/history" },
+  { label: "Insights", icon: Sparkles, href: "/insights" },
   { label: "Settings", icon: Settings, href: "/settings" },
 ]
 
@@ -28,6 +29,15 @@ export const Sidebar = () => {
     queryFn: () => connections.list() as Promise<Connection[]>,
   })
 
+  const { data: unreadInsights } = useQuery<Insight[]>({
+    queryKey: ["insights", activeConnectionId, "unread"],
+    queryFn: () => insightsApi.list(activeConnectionId ?? undefined, true) as Promise<Insight[]>,
+    staleTime: 5 * 60_000,
+    refetchInterval: 5 * 60_000,
+    enabled: !!activeConnectionId,
+  })
+
+  const unreadCount = unreadInsights?.length ?? 0
   const activeConnection = allConnections?.find((c) => c.id === activeConnectionId) ?? allConnections?.[0] ?? null
 
   return (
@@ -47,6 +57,7 @@ export const Sidebar = () => {
       <nav className="flex-1 px-2 py-3 flex flex-col gap-0.5">
         {NAV_ITEMS.map(({ label, icon: Icon, href }) => {
           const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href)
+          const showBadge = label === "Insights" && unreadCount > 0
           return (
             <Link
               key={href}
@@ -61,7 +72,15 @@ export const Sidebar = () => {
               title={sidebarCollapsed ? label : undefined}
             >
               <Icon size={16} className="shrink-0" />
-              {!sidebarCollapsed && <span>{label}</span>}
+              {!sidebarCollapsed && <span className="flex-1">{label}</span>}
+              {showBadge && !sidebarCollapsed && (
+                <span className="flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-danger text-white text-[10px] font-bold leading-none">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+              {showBadge && sidebarCollapsed && (
+                <span className="absolute left-6 top-1 flex items-center justify-center h-3.5 w-3.5 rounded-full bg-danger text-white text-[9px] font-bold" />
+              )}
             </Link>
           )
         })}

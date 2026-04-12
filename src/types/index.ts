@@ -129,14 +129,25 @@ export interface QueryResult {
   feedback_score?: 1 | -1 | null
 }
 
+export type InsightType = "revenue_trend" | "new_users" | "churn_signal" | "top_performer" | "anomaly"
+export type InsightConfidence = "high" | "medium" | "low"
+
 export interface Insight {
   id: string
   connection_id: string
-  title: string
-  description: string
-  severity: InsightSeverity
-  read: boolean
-  created_at: string
+  type: InsightType
+  headline: string
+  summary: string
+  chart_config: ChartConfig | null
+  data_snapshot: Record<string, unknown> | null
+  confidence: InsightConfidence
+  is_read: boolean
+  generated_at: string
+  title?: string
+  description?: string
+  severity?: InsightSeverity
+  read?: boolean
+  created_at?: string
 }
 
 export interface ExportJob {

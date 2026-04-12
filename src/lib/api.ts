@@ -92,9 +92,12 @@ export const query = {
 }
 
 export const insights = {
-  list: (connection_id?: string) =>
-    get<Insight[]>("/api/v1/insights", connection_id ? { connection_id } : undefined),
+  list: (connection_id?: string, unread_only?: boolean) =>
+    get<Insight[]>("/api/v1/insights", { ...(connection_id ? { connection_id } : {}), ...(unread_only ? { unread_only: true } : {}) }),
+  get: (id: string) => get<Insight>(`/api/v1/insights/${id}`),
   markRead: (id: string) => post<Insight>(`/api/v1/insights/${id}/read`),
+  markAllRead: (connection_id?: string) => post<{ updated: number }>("/api/v1/insights/read-all", connection_id ? { connection_id } : {}),
+  dismiss: (id: string) => del<void>(`/api/v1/insights/${id}`),
 }
 
 export const exports = {
