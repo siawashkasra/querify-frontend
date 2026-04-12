@@ -54,6 +54,14 @@ function formatCell(value: unknown, type: ColType): React.ReactNode {
   }
 }
 
+function humanize(col: string): string {
+  return col
+    .replace(/_id$/i, "")
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase())
+    .trim() || col
+}
+
 const columnHelper = createColumnHelper<Record<string, unknown>>()
 
 export const DataTable = ({ columns, rows }: DataTableProps) => {
@@ -63,7 +71,7 @@ export const DataTable = ({ columns, rows }: DataTableProps) => {
     () => columns.map((col) =>
       columnHelper.accessor((row) => row[col], {
         id: col,
-        header: col,
+        header: humanize(col),
         cell: (info) => formatCell(info.getValue(), types[col]),
       })
     ),

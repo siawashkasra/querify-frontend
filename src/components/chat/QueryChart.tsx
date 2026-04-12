@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { format as formatDate, parseISO, isValid } from "date-fns"
+import { format as formatDate, parseISO, isValid, differenceInDays } from "date-fns"
 import {
   ResponsiveContainer,
   BarChart, Bar,
@@ -25,6 +25,16 @@ const PERCENT_KEYWORDS = ["rate", "percent", "pct", "ratio", "churn"]
 const isDateCol = (col: string) => DATE_KEYWORDS.some((k) => col.toLowerCase().includes(k))
 const isCurrencyCol = (col: string) => CURRENCY_KEYWORDS.some((k) => col.toLowerCase().includes(k))
 const isPercentCol = (col: string) => PERCENT_KEYWORDS.some((k) => col.toLowerCase().includes(k))
+
+function pickDateFormat(values: string[]): string {
+  const dates = values.map((v) => parseISO(v)).filter(isValid)
+  if (dates.length < 2) return "MMM d, yyyy"
+  const span = Math.abs(differenceInDays(dates[dates.length - 1], dates[0]))
+  if (span <= 2) return "MMM d, HH:mm"
+  if (span <= 90) return "MMM d"
+  if (span <= 730) return "MMM yyyy"
+  return "yyyy"
+}
 
 function formatAxisValue(value: unknown): string {
   const n = Number(value)
@@ -69,19 +79,24 @@ interface QueryChartProps {
 export const QueryChart = ({ config, rows }: QueryChartProps) => {
   const { type, x_field, y_field, title } = config
 
-  const data = useMemo(() => rows.map((row) => {
-    const xRaw = row[x_field]
-    let xVal: string
-    if (isDateCol(x_field) && typeof xRaw === "string") {
-      const parsed = parseISO(xRaw)
-      xVal = isValid(parsed) ? formatDate(parsed, "MMM yyyy") : String(xRaw)
-    } else {
-      xVal = String(xRaw ?? "")
-    }
-    const yRaw = row[y_field]
-    const yVal = yRaw != null && !isNaN(Number(yRaw)) ? parseFloat(String(yRaw)) : yRaw
-    return { [x_field]: xVal, [y_field]: yVal }
-  }), [rows, x_field, y_field])
+  const data = useMemo(() => {
+    const isDate = isDateCol(x_field)
+    const rawXValues = isDate ? rows.map((r) => String(r[x_field] ?? "")).filter(Boolean) : []
+    const dateFmt = isDate ? pickDateFormat(rawXValues) : ""
+    return rows.map((row) => {
+      const xRaw = row[x_field]
+      let xVal: string
+      if (isDate && typeof xRaw === "string") {
+        const parsed = parseISO(xRaw)
+        xVal = isValid(parsed) ? formatDate(parsed, dateFmt) : String(xRaw)
+      } else {
+        xVal = String(xRaw ?? "")
+      }
+      const yRaw = row[y_field]
+      const yVal = yRaw != null && !isNaN(Number(yRaw)) ? parseFloat(String(yRaw)) : yRaw
+      return { [x_field]: xVal, [y_field]: yVal }
+    })
+  }, [rows, x_field, y_field])
 
   const TooltipContent = useMemo(() => makeTooltip(y_field), [y_field])
 
