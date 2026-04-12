@@ -71,36 +71,38 @@ export default function NewConnectionPage() {
   }
 
   return (
-    <div className="flex flex-col gap-8 max-w-2xl mx-auto">
-      <div>
-        <h2 className="text-lg font-semibold text-[var(--text)]">Connect your database</h2>
-        <p className="text-xs text-[var(--text-muted)] mt-1">Querify will read your schema to understand your data.</p>
+    <div className="h-full overflow-y-auto">
+      <div className="flex flex-col gap-8 max-w-2xl mx-auto p-6">
+        <div>
+          <h2 className="text-lg font-semibold text-[var(--text)]">Connect your database</h2>
+          <p className="text-xs text-[var(--text-muted)] mt-1">Querify will read your schema to understand your data.</p>
+        </div>
+
+        <Stepper steps={STEPS} current={step} />
+
+        {step === 0 && (
+          <StepDetails
+            form={form}
+            onChange={updateForm}
+            onTestSuccess={handleTestSuccess}
+            testPassed={testPassed}
+            onNext={() => setStep(1)}
+          />
+        )}
+
+        {step === 1 && (
+          <StepReview
+            form={form}
+            onBack={() => setStep(0)}
+            onSave={handleSave}
+            saving={saving}
+          />
+        )}
+
+        {step === 2 && savedId && (
+          <StepSetup connectionId={savedId} onComplete={handleComplete} />
+        )}
       </div>
-
-      <Stepper steps={STEPS} current={step} />
-
-      {step === 0 && (
-        <StepDetails
-          form={form}
-          onChange={updateForm}
-          onTestSuccess={handleTestSuccess}
-          testPassed={testPassed}
-          onNext={() => setStep(1)}
-        />
-      )}
-
-      {step === 1 && (
-        <StepReview
-          form={form}
-          onBack={() => setStep(0)}
-          onSave={handleSave}
-          saving={saving}
-        />
-      )}
-
-      {step === 2 && savedId && (
-        <StepSetup connectionId={savedId} onComplete={handleComplete} />
-      )}
     </div>
   )
 }

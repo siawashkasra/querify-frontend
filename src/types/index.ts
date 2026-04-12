@@ -15,6 +15,7 @@ export interface Connection {
   username: string
   ssl_mode: string
   status: ConnectionStatus
+  table_count?: number | null
   context_layer: Record<string, unknown> | null
   context_version: number | null
   last_tested_at: string | null

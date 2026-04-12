@@ -47,6 +47,9 @@ const post = <T>(url: string, data?: unknown, signal?: AbortSignal) =>
 const del = <T>(url: string) =>
   (http as unknown as { delete: (url: string) => Promise<T> }).delete(url)
 
+const put = <T>(url: string, data?: unknown) =>
+  (http as unknown as { put: (url: string, data: unknown) => Promise<T> }).put(url, data)
+
 export const connections = {
   list: () => get<Connection[]>("/api/v1/connections"),
   get: (id: string) => get<Connection>(`/api/v1/connections/${id}`),
@@ -59,6 +62,15 @@ export const connections = {
     password: string
     ssl_mode?: string
   }) => post<Connection>("/api/v1/connections", data),
+  update: (id: string, data: {
+    name?: string
+    host?: string
+    port?: number
+    database?: string
+    username?: string
+    password?: string
+    ssl_mode?: string
+  }) => put<Connection>(`/api/v1/connections/${id}`, data),
   test: (data: {
     host: string
     port: number
@@ -67,6 +79,7 @@ export const connections = {
     password: string
     ssl_mode?: string
   }) => post<ConnectionTestResult>("/api/v1/connections/test", data),
+  testExisting: (id: string) => post<ConnectionTestResult>(`/api/v1/connections/${id}/test`),
   delete: (id: string) => del<void>(`/api/v1/connections/${id}`),
   introspect: (id: string) => post<SchemaSnapshot>(`/api/v1/connections/${id}/schema/introspect`),
   getSchema: (id: string) => get<SchemaSnapshot>(`/api/v1/connections/${id}/schema`),
