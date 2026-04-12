@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
-import { useRouter } from "next/navigation"
+import { Suspense, useEffect, useRef, useState } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useAppStore } from "@/store/appStore"
 import { query as queryApi } from "@/lib/api"
 import { useChatStore } from "@/store/chatStore"
@@ -15,15 +15,25 @@ import type { QueryResult } from "@/types"
 
 const NEW_SESSION_KEY = "__new__"
 
-export default function NewChatPage() {
+export default function NewChatPageWrapper() {
+  return (
+    <Suspense>
+      <NewChatPage />
+    </Suspense>
+  )
+}
+
+function NewChatPage() {
   const router = useRouter()
-  const { activeConnectionId } = useAppStore()
+  const searchParams = useSearchParams()
+  const { activeConnectionId, setActiveConnection } = useAppStore()
   const { threads, addUserMessage, addLoadingMessage, resolveMessage, rejectMessage, migrateThread } = useChatStore()
   const { getSignal, cancel } = useAbortController()
   const [loading, setLoading] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const pendingSubmit = useRef<string | null>(null)
   const inputRef = useRef<PromptInputHandle>(null)
+  const autoSubmitDone = useRef(false)
 
   const threadKey = sessionId ?? NEW_SESSION_KEY
   const messages = threads[threadKey] ?? []
@@ -69,6 +79,16 @@ export default function NewChatPage() {
       handleSubmit(prompt)
     }
   })
+
+  useEffect(() => {
+    if (autoSubmitDone.current) return
+    const promptParam = searchParams.get("prompt")
+    const connParam = searchParams.get("connection")
+    if (!promptParam) return
+    autoSubmitDone.current = true
+    if (connParam && connParam !== activeConnectionId) setActiveConnection(connParam)
+    handleSubmit(promptParam)
+  }, [searchParams])
 
   const handleChipSelect = (prompt: string) => {
     if (!loading) handleSubmit(prompt)
