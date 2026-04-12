@@ -100,7 +100,8 @@ export const insights = {
 export const exports = {
   list: (connection_id?: string) =>
     get<ExportJob[]>("/api/v1/exports", connection_id ? { connection_id } : undefined),
-  create: (data: { connection_id: string; query: string }) =>
+  get: (id: string) => get<ExportJob>(`/api/v1/exports/${id}`),
+  create: (data: { message_id: string; format: "csv" | "pdf" | "xlsx" }) =>
     post<ExportJob>("/api/v1/exports", data),
 }
 

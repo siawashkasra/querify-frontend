@@ -1,8 +1,12 @@
 "use client"
 
-import { useRef, useEffect, useState, KeyboardEvent } from "react"
+import { useRef, useEffect, useState, useImperativeHandle, forwardRef, KeyboardEvent } from "react"
 import { ArrowUp, Square } from "lucide-react"
 import { cn } from "@/lib/cn"
+
+export interface PromptInputHandle {
+  focus: () => void
+}
 
 interface PromptInputProps {
   onSubmit: (prompt: string) => void
@@ -11,9 +15,11 @@ interface PromptInputProps {
   disabled?: boolean
 }
 
-export const PromptInput = ({ onSubmit, onCancel, loading, disabled }: PromptInputProps) => {
+export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(({ onSubmit, onCancel, loading, disabled }, fwdRef) => {
   const [value, setValue] = useState("")
   const ref = useRef<HTMLTextAreaElement>(null)
+
+  useImperativeHandle(fwdRef, () => ({ focus: () => ref.current?.focus() }), [])
 
   useEffect(() => {
     if (!loading) ref.current?.focus()
@@ -88,6 +94,8 @@ export const PromptInput = ({ onSubmit, onCancel, loading, disabled }: PromptInp
       </p>
     </div>
   )
-}
+})
+
+PromptInput.displayName = "PromptInput"
 
 export default PromptInput

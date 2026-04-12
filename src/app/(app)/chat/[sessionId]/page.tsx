@@ -1,6 +1,6 @@
 "use client"
 
-import { use, useEffect, useState, useCallback } from "react"
+import { use, useEffect, useState, useCallback, useRef } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useAppStore } from "@/store/appStore"
 import { query as queryApi } from "@/lib/api"
@@ -9,7 +9,7 @@ import { useAbortController } from "@/hooks/useAbortController"
 import SessionSidebar from "@/components/chat/SessionSidebar"
 import ChatHeader from "@/components/chat/ChatHeader"
 import MessageThread from "@/components/chat/MessageThread"
-import PromptInput from "@/components/chat/PromptInput"
+import PromptInput, { type PromptInputHandle } from "@/components/chat/PromptInput"
 import SuggestedPrompts from "@/components/chat/SuggestedPrompts"
 import type { ChatSession, QueryResult } from "@/types"
 
@@ -25,6 +25,7 @@ export default function ChatPage({ params }: ChatPageProps) {
   const { getSignal, cancel } = useAbortController()
   const [loading, setLoading] = useState(false)
   const [sessionTitle, setSessionTitle] = useState<string | null>(null)
+  const inputRef = useRef<PromptInputHandle>(null)
 
   const { data: session } = useQuery<ChatSession>({
     queryKey: ["session", sessionId],
@@ -69,9 +70,10 @@ export default function ChatPage({ params }: ChatPageProps) {
         {messages.length === 0 ? (
           <SuggestedPrompts onSelect={handleSubmit} />
         ) : (
-          <MessageThread messages={messages} />
+          <MessageThread messages={messages} onFollowUp={() => inputRef.current?.focus()} />
         )}
         <PromptInput
+          ref={inputRef}
           onSubmit={handleSubmit}
           onCancel={cancel}
           loading={loading}

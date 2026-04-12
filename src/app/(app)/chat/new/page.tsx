@@ -9,7 +9,7 @@ import { useAbortController } from "@/hooks/useAbortController"
 import SessionSidebar from "@/components/chat/SessionSidebar"
 import ChatHeader from "@/components/chat/ChatHeader"
 import MessageThread from "@/components/chat/MessageThread"
-import PromptInput from "@/components/chat/PromptInput"
+import PromptInput, { type PromptInputHandle } from "@/components/chat/PromptInput"
 import SuggestedPrompts from "@/components/chat/SuggestedPrompts"
 import type { QueryResult } from "@/types"
 
@@ -23,6 +23,7 @@ export default function NewChatPage() {
   const [loading, setLoading] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const pendingSubmit = useRef<string | null>(null)
+  const inputRef = useRef<PromptInputHandle>(null)
 
   const threadKey = sessionId ?? NEW_SESSION_KEY
   const messages = threads[threadKey] ?? []
@@ -77,9 +78,10 @@ export default function NewChatPage() {
         {messages.length === 0 ? (
           <SuggestedPrompts onSelect={handleChipSelect} />
         ) : (
-          <MessageThread messages={messages} />
+          <MessageThread messages={messages} onFollowUp={() => inputRef.current?.focus()} />
         )}
         <PromptInput
+          ref={inputRef}
           onSubmit={handleSubmit}
           onCancel={cancel}
           loading={loading}

@@ -125,6 +125,8 @@ export interface QueryResult {
   suggestions: string[]
   execution_ms: number | null
   total_ms: number | null
+  model_used?: string | null
+  feedback_score?: 1 | -1 | null
 }
 
 export interface Insight {
