@@ -5,25 +5,16 @@ import { format } from "date-fns"
 import { cn } from "@/lib/cn"
 import TypingIndicator from "./TypingIndicator"
 import ResultCard from "./ResultCard"
+import ErrorCard from "./ErrorCard"
 import type { ThreadMessage } from "@/store/chatStore"
-
-interface ErrorCardProps {
-  message: string
-}
-
-const ErrorCard = ({ message }: ErrorCardProps) => (
-  <div className="rounded-xl border border-danger/30 bg-danger/5 px-4 py-3">
-    <p className="text-sm text-danger font-medium">Something went wrong</p>
-    <p className="text-xs text-[var(--text-dim)] mt-0.5">{message}</p>
-  </div>
-)
 
 interface MessageThreadProps {
   messages: ThreadMessage[]
   onFollowUp?: () => void
+  onRetry?: (prompt: string) => void
 }
 
-export const MessageThread = ({ messages, onFollowUp }: MessageThreadProps) => {
+export const MessageThread = ({ messages, onFollowUp, onRetry }: MessageThreadProps) => {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -32,7 +23,7 @@ export const MessageThread = ({ messages, onFollowUp }: MessageThreadProps) => {
 
   return (
     <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-1">
-      {messages.map((msg) => {
+      {messages.map((msg, idx) => {
         if (msg.role === "user") {
           return (
             <div key={msg.id} className="flex justify-end py-1 group">
@@ -48,6 +39,8 @@ export const MessageThread = ({ messages, onFollowUp }: MessageThreadProps) => {
           )
         }
 
+        const prevUserMsg = messages.slice(0, idx).reverse().find((m) => m.role === "user")
+
         return (
           <div key={msg.id} className="flex items-start gap-3 py-1">
             <div className="flex items-center justify-center h-7 w-7 rounded-full bg-[var(--surface-3)] border border-[var(--border)] shrink-0 mt-1">
@@ -55,8 +48,15 @@ export const MessageThread = ({ messages, onFollowUp }: MessageThreadProps) => {
             </div>
             <div className="flex-1 min-w-0">
               {msg.loading && <TypingIndicator />}
-              {!msg.loading && msg.error && <ErrorCard message={msg.error} />}
-              {!msg.loading && msg.result && (
+              {!msg.loading && (msg.error || msg.errorType) && (
+                <ErrorCard
+                  errorType={msg.errorType}
+                  errorDetail={msg.errorDetail}
+                  onRetry={onRetry && prevUserMsg?.prompt ? () => onRetry(prevUserMsg.prompt!) : undefined}
+                  onRephrase={onFollowUp}
+                />
+              )}
+              {!msg.loading && !msg.error && !msg.errorType && msg.result && (
                 <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl rounded-tl-sm px-4 py-3">
                   <ResultCard result={msg.result} onFollowUp={onFollowUp} />
                 </div>

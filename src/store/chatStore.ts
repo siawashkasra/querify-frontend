@@ -7,6 +7,8 @@ export interface ThreadMessage {
   prompt?: string
   result?: QueryResult
   error?: string
+  errorType?: string | null
+  errorDetail?: string | null
   loading?: boolean
   createdAt: Date
 }
@@ -16,7 +18,7 @@ interface ChatState {
   addUserMessage: (sessionId: string, prompt: string) => string
   addLoadingMessage: (sessionId: string) => string
   resolveMessage: (sessionId: string, tempId: string, result: QueryResult) => void
-  rejectMessage: (sessionId: string, tempId: string, error: string) => void
+  rejectMessage: (sessionId: string, tempId: string, error: string, errorType?: string | null, errorDetail?: string | null) => void
   clearThread: (sessionId: string) => void
 }
 
@@ -59,12 +61,12 @@ export const useChatStore = create<ChatState>((set) => ({
     }))
   },
 
-  rejectMessage: (sessionId, tempId, error) => {
+  rejectMessage: (sessionId, tempId, error, errorType, errorDetail) => {
     set((s) => ({
       threads: {
         ...s.threads,
         [sessionId]: (s.threads[sessionId] ?? []).map((m) =>
-          m.id === tempId ? { ...m, loading: false, error } : m
+          m.id === tempId ? { ...m, loading: false, error, errorType, errorDetail } : m
         ),
       },
     }))

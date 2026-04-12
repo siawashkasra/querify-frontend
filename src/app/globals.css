@@ -84,3 +84,19 @@ body {
   scrollbar-width: thin;
   scrollbar-color: var(--brand) var(--surface);
 }
+
+@keyframes shimmer {
+  0% { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--surface-3) 25%,
+    #e8edf5 50%,
+    var(--surface-3) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}

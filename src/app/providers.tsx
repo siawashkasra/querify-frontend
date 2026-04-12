@@ -11,14 +11,23 @@ export default function Providers({ children }: { children: React.ReactNode }) {
       <Toaster
         position="top-right"
         toastOptions={{
+          duration: 3000,
           style: {
-            background: "var(--surface-2)",
+            background: "#ffffff",
             color: "var(--text)",
             border: "1px solid var(--border)",
             fontFamily: "var(--font-sans)",
+            fontSize: "13px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
           },
-          success: { iconTheme: { primary: "#10B981", secondary: "#fff" } },
-          error: { iconTheme: { primary: "#EF4444", secondary: "#fff" } },
+          success: {
+            duration: 3000,
+            iconTheme: { primary: "#10B981", secondary: "#fff" },
+          },
+          error: {
+            duration: 6000,
+            iconTheme: { primary: "#EF4444", secondary: "#fff" },
+          },
         }}
       />
     </QueryClientProvider>

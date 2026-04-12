@@ -1,5 +1,6 @@
 import axios, { AxiosError, AxiosResponse } from "axios"
 import { v4 as uuidv4 } from "uuid"
+import { toast } from "react-hot-toast"
 import type {
   Connection,
   ConnectionTestResult,
@@ -26,10 +27,14 @@ http.interceptors.request.use((config) => {
 http.interceptors.response.use(
   (response: AxiosResponse) => response.data,
   (error: AxiosError<{ detail: { error_type: string; message: string } }>) => {
+    const status = error.response?.status
+    if (status && status >= 500) {
+      toast.error("Something went wrong. Our team has been notified.", { duration: 6000, id: "server-error" })
+    }
     const detail = error.response?.data?.detail
     const message = detail?.message || error.message || "An unexpected error occurred"
     const error_type = detail?.error_type || "UNKNOWN_ERROR"
-    return Promise.reject({ error_type, message, status: error.response?.status })
+    return Promise.reject({ error_type, message, status })
   }
 )
 

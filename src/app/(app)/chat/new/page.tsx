@@ -50,9 +50,12 @@ export default function NewChatPage() {
       const result = await queryApi.execute({ prompt, session_id: resolvedSession, connection_id: activeConnectionId }, signal) as QueryResult
       resolveMessage(resolvedSession, loadingId, result)
     } catch (err: unknown) {
-      const message = err instanceof Error && err.name === "AbortError" ? "Query cancelled." : (err instanceof Error ? err.message : "Query failed.")
+      const isAbort = err instanceof Error && err.name === "AbortError"
+      const apiErr = err as { error_type?: string; message?: string } | null
+      const message = isAbort ? "Query cancelled." : (apiErr?.message ?? "Query failed.")
+      const errorType = isAbort ? null : (apiErr?.error_type ?? null)
       const key = sessionId ?? NEW_SESSION_KEY
-      rejectMessage(key, loadingId, message)
+      rejectMessage(key, loadingId, message, errorType, message)
     } finally {
       setLoading(false)
     }
@@ -78,7 +81,7 @@ export default function NewChatPage() {
         {messages.length === 0 ? (
           <SuggestedPrompts onSelect={handleChipSelect} />
         ) : (
-          <MessageThread messages={messages} onFollowUp={() => inputRef.current?.focus()} />
+          <MessageThread messages={messages} onFollowUp={() => inputRef.current?.focus()} onRetry={handleSubmit} />
         )}
         <PromptInput
           ref={inputRef}
