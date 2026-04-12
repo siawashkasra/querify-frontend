@@ -7,6 +7,7 @@ import KPICards from "./KPICards"
 import DataTable from "./DataTable"
 import SQLDisclosure from "./SQLDisclosure"
 import ResultFooter from "./ResultFooter"
+import QueryChart from "./QueryChart"
 import type { QueryResult } from "@/types"
 
 interface ResultCardProps {
@@ -50,11 +51,8 @@ export const ResultCard = ({ result, onFollowUp }: ResultCardProps) => {
         </div>
       )}
 
-      {/* Chart slot — filled by C7 */}
       {result.chart_config && (
-        <div className="flex items-center justify-center h-40 rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface)] text-xs text-[var(--text-muted)]">
-          Chart ({result.chart_config.type}) — built in C7
-        </div>
+        <QueryChart config={result.chart_config} rows={result.rows ?? []} />
       )}
 
       {hasTable && <DataTable columns={result.columns} rows={result.rows} />}

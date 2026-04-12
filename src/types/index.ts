@@ -83,7 +83,7 @@ export interface KPICard {
 }
 
 export interface ChartConfig {
-  type: "bar" | "line" | "pie" | "horizontal_bar" | "scatter"
+  type: "bar" | "line" | "area" | "pie" | "horizontal_bar" | "scatter"
   x_axis: string
   y_axis: string
   title?: string | null
