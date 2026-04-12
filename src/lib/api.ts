@@ -78,6 +78,7 @@ export const query = {
     search?: string
     page?: number
     limit?: number
+    offset?: number
   }) => get<ChatMessage[]>("/api/v1/query/history", params as Record<string, unknown>),
   historyItem: (id: string) => get<ChatMessage>(`/api/v1/query/history/${id}`),
   rerun: (id: string) => post<QueryResult>(`/api/v1/query/history/${id}/rerun`),

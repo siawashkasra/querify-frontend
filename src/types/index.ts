@@ -1,6 +1,6 @@
 export type DbType = "postgres" | "mysql" | "mssql" | "bigquery" | "snowflake" | "redshift"
 export type ConnectionStatus = "active" | "error" | "pending" | "untested"
-export type MessageStatus = "success" | "failed" | "pending"
+export type MessageStatus = "success" | "failed" | "pending" | "empty" | "timeout" | "unsafe"
 export type MessageRole = "user" | "assistant"
 export type InsightSeverity = "info" | "warning" | "critical"
 export type ExportStatus = "pending" | "processing" | "done" | "failed"
