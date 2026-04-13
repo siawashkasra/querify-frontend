@@ -119,7 +119,7 @@ export const OnboardingProgress = ({ connectionId, onComplete, onFallback }: Onb
 
   return (
     <div className={cn(
-      "fixed inset-0 z-50 flex items-center justify-center bg-[#0f172a] transition-opacity duration-500",
+      "fixed inset-0 z-50 flex items-center justify-center bg-[var(--bg)] transition-opacity duration-500",
       exiting ? "opacity-0 pointer-events-none" : "opacity-100"
     )}>
       <div className="flex flex-col items-center gap-12 w-full max-w-[480px] px-8">
@@ -136,27 +136,27 @@ export const OnboardingProgress = ({ connectionId, onComplete, onFallback }: Onb
                     "h-9 w-9 rounded-full flex items-center justify-center transition-all duration-500",
                     isDone && "bg-[var(--brand)]",
                     isActive && "bg-[var(--brand)] animate-pulse-ring",
-                    !isDone && !isActive && "bg-white/10"
+                    !isDone && !isActive && "bg-[var(--border)]"
                   )}>
                     {isDone ? (
                       <Check size={15} className="text-white animate-scale-in" strokeWidth={2.5} />
                     ) : isActive ? (
                       <div className="h-2.5 w-2.5 rounded-full bg-white animate-pulse" />
                     ) : (
-                      <div className="h-2.5 w-2.5 rounded-full bg-white/25" />
+                      <div className="h-2.5 w-2.5 rounded-full bg-[var(--text-muted)]" />
                     )}
                   </div>
                   <span className={cn(
                     "text-[11px] font-medium whitespace-nowrap transition-colors duration-300",
                     isDone && "text-[var(--brand)]",
-                    isActive && "text-white",
-                    !isDone && !isActive && "text-white/25"
+                    isActive && "text-[var(--text)]",
+                    !isDone && !isActive && "text-[var(--text-muted)]"
                   )}>
                     {step.label}
                   </span>
                 </div>
                 {i < STEPS.length - 1 && (
-                  <div className="flex-1 h-px mx-4 mb-7 relative bg-white/10 overflow-hidden rounded-full">
+                  <div className="flex-1 h-px mx-4 mb-7 relative bg-[var(--border)] overflow-hidden rounded-full">
                     <div className={cn(
                       "absolute inset-y-0 left-0 bg-[var(--brand)] transition-all duration-700 rounded-full",
                       isDone ? "w-full" : "w-0"
@@ -169,22 +169,22 @@ export const OnboardingProgress = ({ connectionId, onComplete, onFallback }: Onb
         </div>
 
         <div className="flex flex-col items-center gap-3 text-center min-h-[72px]">
-          <p className="text-lg font-medium text-white transition-all duration-500">
+          <p className="text-lg font-medium text-[var(--text)] transition-all duration-500">
             {MAIN_MESSAGES[status.stage] ?? "Setting things up..."}
           </p>
-          <p key={subTextKey} className="text-sm text-white/45 animate-fade-slide-in leading-relaxed">
+          <p key={subTextKey} className="text-sm text-[var(--text-muted)] animate-fade-slide-in leading-relaxed">
             {subText || prevSubText}
           </p>
         </div>
 
         <div className="w-full space-y-2">
-          <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+          <div className="w-full h-1 bg-[var(--border)] rounded-full overflow-hidden">
             <div
               className="h-full bg-[var(--brand)] rounded-full transition-all duration-700 ease-out"
               style={{ width: `${Math.max(status.progress_pct, 5)}%` }}
             />
           </div>
-          <p className="text-[11px] text-white/25 text-right">{status.progress_pct}%</p>
+          <p className="text-[11px] text-[var(--text-muted)] text-right">{status.progress_pct}%</p>
         </div>
       </div>
     </div>

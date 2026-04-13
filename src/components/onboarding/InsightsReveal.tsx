@@ -66,7 +66,7 @@ export const InsightsReveal = ({ connectionId, databaseName, revealStartMs }: In
   const knowsBullets = buildKnowsBullets(context, tableCount)
 
   return (
-    <div className="fixed inset-0 z-50 bg-[#0f172a] overflow-y-auto">
+    <div className="fixed inset-0 z-50 bg-[var(--bg)] overflow-y-auto">
       <div className="flex flex-col items-center gap-8 min-h-full px-6 py-12">
         <span className="text-xl font-bold tracking-tight text-[var(--brand)]">QUERIFY</span>
 
@@ -74,8 +74,8 @@ export const InsightsReveal = ({ connectionId, databaseName, revealStartMs }: In
           "flex flex-col items-center gap-2 text-center transition-all duration-500",
           headingVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"
         )}>
-          <h1 className="text-2xl font-semibold text-white">Here is what I found in your database</h1>
-          <p className="text-sm text-white/45">
+          <h1 className="text-2xl font-semibold text-[var(--text)]">Here is what I found in your database</h1>
+          <p className="text-sm text-[var(--text-muted)]">
             Based on {tableCount > 0 ? `${tableCount} tables in ` : ""}{databaseName}
           </p>
         </div>
@@ -90,25 +90,25 @@ export const InsightsReveal = ({ connectionId, databaseName, revealStartMs }: In
             </div>
           ))}
           {displayInsights.length === 0 && ctaVisible && (
-            <p className="text-sm text-white/35 text-center py-4">
+            <p className="text-sm text-[var(--text-muted)] text-center py-4">
               Insights are still being generated — check back shortly.
             </p>
           )}
         </div>
 
         {ctaVisible && knowsBullets.length > 0 && (
-          <div className="w-full max-w-[480px] border border-white/10 rounded-lg overflow-hidden">
+          <div className="w-full max-w-[480px] border border-[var(--border)] rounded-lg overflow-hidden">
             <button
               onClick={() => setKnowsExpanded((v) => !v)}
-              className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-white/55 hover:text-white/80 transition-colors"
+              className="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-[var(--text-dim)] hover:text-[var(--text)] transition-colors"
             >
               <span>What I understood about your data</span>
               {knowsExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             </button>
             {knowsExpanded && (
-              <div className="flex flex-col gap-2.5 px-4 pb-4 border-t border-white/10 pt-3 animate-fade-slide-in">
+              <div className="flex flex-col gap-2.5 px-4 pb-4 border-t border-[var(--border)] pt-3 animate-fade-slide-in">
                 {knowsBullets.map((bullet, i) => (
-                  <p key={i} className="text-xs text-white/50 flex items-start gap-2.5 leading-relaxed">
+                  <p key={i} className="text-xs text-[var(--text-dim)] flex items-start gap-2.5 leading-relaxed">
                     <span className="text-[var(--brand)] shrink-0 mt-px">✓</span>
                     {bullet}
                   </p>
@@ -151,7 +151,7 @@ export const FallbackState = ({ connectionId, reason }: FallbackStateProps) => {
   }, [reason])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0f172a] px-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--bg)] px-6">
       <div className="flex flex-col items-center gap-8 w-full max-w-[480px] text-center">
         <span className="text-2xl font-bold tracking-tight text-[var(--brand)]">QUERIFY</span>
         <div className="flex flex-col items-center gap-4">
@@ -159,10 +159,10 @@ export const FallbackState = ({ connectionId, reason }: FallbackStateProps) => {
             <AlertTriangle size={22} className="text-[var(--warning)]" />
           </div>
           <div className="flex flex-col gap-2">
-            <p className="text-base font-medium text-white">
+            <p className="text-base font-medium text-[var(--text)]">
               We had trouble analysing your database automatically.
             </p>
-            <p className="text-sm text-white/45 leading-relaxed">
+            <p className="text-sm text-[var(--text-muted)] leading-relaxed">
               You can still ask questions — we will learn as you go.
             </p>
           </div>
