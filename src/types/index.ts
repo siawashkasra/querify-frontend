@@ -161,6 +161,15 @@ export interface ExportJob {
   completed_at: string | null
 }
 
+export type PipelineStage = "introspection" | "context" | "insights" | "complete" | "failed"
+
+export interface PipelineStatus {
+  stage: PipelineStage
+  progress_pct: number
+  insights_count: number
+  error?: string | null
+}
+
 export interface PaginatedResponse<T> {
   items: T[]
   total: number

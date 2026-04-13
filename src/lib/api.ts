@@ -11,6 +11,7 @@ import type {
   Insight,
   ExportJob,
   PaginatedResponse,
+  PipelineStatus,
 } from "@/types"
 
 const http = axios.create({
@@ -85,6 +86,8 @@ export const connections = {
   getSchema: (id: string) => get<SchemaSnapshot>(`/api/v1/connections/${id}/schema`),
   inferContext: (id: string) => post<Record<string, unknown>>(`/api/v1/connections/${id}/context/infer`),
   getContext: (id: string) => get<Record<string, unknown>>(`/api/v1/connections/${id}/context`),
+  pipelineStatus: (id: string) => get<PipelineStatus>(`/api/v1/connections/${id}/pipeline-status`),
+  corrections: (id: string) => get<unknown[]>(`/api/v1/connections/${id}/corrections`),
 }
 
 export const query = {

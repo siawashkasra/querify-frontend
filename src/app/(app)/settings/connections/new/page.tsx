@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback } from "react"
+import { useState, useCallback, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { connections } from "@/lib/api"
 import { useAppStore } from "@/store/appStore"
@@ -9,7 +9,10 @@ import toast from "react-hot-toast"
 import Stepper from "@/components/connections/Stepper"
 import StepDetails, { type ConnectionFormData } from "@/components/connections/StepDetails"
 import StepReview from "@/components/connections/StepReview"
-import StepSetup from "@/components/connections/StepSetup"
+import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress"
+import { InsightsReveal, FallbackState } from "@/components/onboarding/InsightsReveal"
+
+type Phase = "form" | "review" | "progress" | "reveal" | "fallback"
 
 const STEPS = ["Connection details", "Review", "Setup"]
 
@@ -28,11 +31,15 @@ export default function NewConnectionPage() {
   const router = useRouter()
   const qc = useQueryClient()
   const setActiveConnection = useAppStore((s) => s.setActiveConnection)
-  const [step, setStep] = useState(0)
+  const [phase, setPhase] = useState<Phase>("form")
   const [form, setForm] = useState<ConnectionFormData>(DEFAULT_FORM)
   const [testPassed, setTestPassed] = useState(false)
   const [saving, setSaving] = useState(false)
   const [savedId, setSavedId] = useState<string | null>(null)
+  const [fallbackReason, setFallbackReason] = useState("")
+  const revealStartMs = useRef(0)
+
+  const stepIndex = phase === "form" ? 0 : phase === "review" ? 1 : 2
 
   const updateForm = useCallback((patch: Partial<ConnectionFormData>) => {
     setForm((prev) => ({ ...prev, ...patch }))
@@ -56,7 +63,7 @@ export default function NewConnectionPage() {
       setSavedId(conn.id)
       setActiveConnection(conn.id)
       await qc.invalidateQueries({ queryKey: ["connections"] })
-      setStep(2)
+      setPhase("progress")
     } catch (err: unknown) {
       const e = err as { message?: string }
       toast.error(e.message || "Failed to save connection.")
@@ -65,9 +72,41 @@ export default function NewConnectionPage() {
     }
   }
 
-  const handleComplete = () => {
+  const handleProgressComplete = useCallback((insightsCount: number) => {
+    void insightsCount
+    revealStartMs.current = Date.now()
     qc.invalidateQueries({ queryKey: ["connections"] })
-    router.push("/")
+    setPhase("reveal")
+  }, [qc])
+
+  const handleFallback = useCallback((reason: string) => {
+    setFallbackReason(reason)
+    qc.invalidateQueries({ queryKey: ["connections"] })
+    setPhase("fallback")
+  }, [qc])
+
+  if (phase === "progress" && savedId) {
+    return (
+      <OnboardingProgress
+        connectionId={savedId}
+        onComplete={handleProgressComplete}
+        onFallback={handleFallback}
+      />
+    )
+  }
+
+  if (phase === "reveal" && savedId) {
+    return (
+      <InsightsReveal
+        connectionId={savedId}
+        databaseName={form.database}
+        revealStartMs={revealStartMs.current}
+      />
+    )
+  }
+
+  if (phase === "fallback" && savedId) {
+    return <FallbackState connectionId={savedId} reason={fallbackReason} />
   }
 
   return (
@@ -78,29 +117,25 @@ export default function NewConnectionPage() {
           <p className="text-xs text-[var(--text-muted)] mt-1">Querify will read your schema to understand your data.</p>
         </div>
 
-        <Stepper steps={STEPS} current={step} />
+        <Stepper steps={STEPS} current={stepIndex} />
 
-        {step === 0 && (
+        {phase === "form" && (
           <StepDetails
             form={form}
             onChange={updateForm}
             onTestSuccess={handleTestSuccess}
             testPassed={testPassed}
-            onNext={() => setStep(1)}
+            onNext={() => setPhase("review")}
           />
         )}
 
-        {step === 1 && (
+        {phase === "review" && (
           <StepReview
             form={form}
-            onBack={() => setStep(0)}
+            onBack={() => setPhase("form")}
             onSave={handleSave}
             saving={saving}
           />
-        )}
-
-        {step === 2 && savedId && (
-          <StepSetup connectionId={savedId} onComplete={handleComplete} />
         )}
       </div>
     </div>
