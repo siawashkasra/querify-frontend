@@ -170,6 +170,13 @@ export interface PipelineStatus {
   error?: string | null
 }
 
+export interface SuggestedQuestion {
+  question: string
+  category: string
+  complexity: string
+  reason: string
+}
+
 export interface PaginatedResponse<T> {
   items: T[]
   total: number

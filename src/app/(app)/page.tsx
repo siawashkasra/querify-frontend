@@ -17,17 +17,9 @@ import ConnectionCard from "@/components/connections/ConnectionCard"
 import InsightCard from "@/components/insights/InsightCard"
 import InsightModal from "@/components/insights/InsightModal"
 import { useGreeting } from "@/hooks/useGreeting"
+import { useSuggestedQuestions } from "@/hooks/useSuggestedQuestions"
 import { Database, Plus, MessageSquarePlus } from "lucide-react"
 import type { Connection, ChatMessage, Insight } from "@/types"
-
-const SUGGESTED_QUESTIONS = [
-  "What is my revenue this month?",
-  "How many new users signed up this week?",
-  "Which customers are at risk of churning?",
-  "Show me revenue by month for the last 6 months",
-  "Who are my top 10 customers by value?",
-  "What is my current churn rate?",
-]
 
 function SectionError({ label, onRetry }: { label: string; onRetry: () => void }) {
   return (
@@ -59,6 +51,7 @@ export default function DashboardPage() {
   const greeting = useGreeting()
   const { activeConnectionId, setActiveConnection } = useAppStore()
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null)
+  const { suggestions: suggestedQuestions, isLoading: loadingSuggestions } = useSuggestedQuestions(activeConnectionId)
 
   const { data: allConnections, isLoading: loadingConns, error: connsError, refetch: refetchConns } =
     useQuery<Connection[]>({
@@ -186,15 +179,21 @@ export default function DashboardPage() {
         <section className="flex flex-col gap-3">
           <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">Suggested questions</h3>
           <div className="flex flex-wrap gap-2">
-            {SUGGESTED_QUESTIONS.map((q) => (
-              <button
-                key={q}
-                onClick={() => startQuestion(q)}
-                className="px-3 py-1.5 rounded-full border border-[var(--border)] bg-surface-2 text-xs text-[var(--text-dim)] hover:border-brand/50 hover:text-brand-mid hover:bg-surface-3 transition-colors"
-              >
-                {q}
-              </button>
-            ))}
+            {loadingSuggestions ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className={cn("h-7 rounded-full animate-pulse bg-surface-3", i % 2 === 0 ? "w-48" : "w-36")} />
+              ))
+            ) : (
+              suggestedQuestions.map((s) => (
+                <button
+                  key={s.question}
+                  onClick={() => startQuestion(s.question)}
+                  className="px-3 py-1.5 rounded-full border border-[var(--border)] bg-surface-2 text-xs text-[var(--text-dim)] hover:border-brand/50 hover:text-brand-mid hover:bg-surface-3 transition-colors"
+                >
+                  {s.question}
+                </button>
+              ))
+            )}
           </div>
         </section>
       )}
