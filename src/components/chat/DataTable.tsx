@@ -4,6 +4,7 @@ import { useMemo } from "react"
 import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "@tanstack/react-table"
 import { format as formatDate, parseISO, isValid } from "date-fns"
 import { cn } from "@/lib/cn"
+import { formatUnknownForUi } from "@/lib/formatDisplayValue"
 
 interface DataTableProps {
   columns: string[]
@@ -29,14 +30,30 @@ function formatCell(value: unknown, type: ColType): React.ReactNode {
   if (value == null) return <span className="text-[var(--text-muted)]">—</span>
   switch (type) {
     case "number": {
+      if (value != null && typeof value === "object") {
+        const s = formatUnknownForUi(value)
+        return s.length > 40 ? <span className="font-mono" title={s}>{s.slice(0, 40)}…</span> : <span className="font-mono">{s}</span>
+      }
       const n = typeof value === "number" ? value : Number(value)
+      if (Number.isNaN(n)) {
+        const s = formatUnknownForUi(value)
+        return s.length > 40 ? <span className="font-mono" title={s}>{s.slice(0, 40)}…</span> : <span className="font-mono">{s || "—"}</span>
+      }
       return <span className="font-mono">{n.toLocaleString("en-US", { maximumFractionDigits: 4 })}</span>
     }
     case "date": {
+      if (value != null && typeof value === "object") {
+        const s = formatUnknownForUi(value)
+        return s.length > 40 ? <span title={s}>{s.slice(0, 40)}…</span> : s
+      }
       const d = parseISO(String(value))
-      return isValid(d) ? formatDate(d, "MMM d, yyyy") : String(value)
+      return isValid(d) ? formatDate(d, "MMM d, yyyy") : formatUnknownForUi(value)
     }
     case "boolean": {
+      if (value != null && typeof value === "object") {
+        const s = formatUnknownForUi(value)
+        return s.length > 40 ? <span title={s}>{s.slice(0, 40)}…</span> : s
+      }
       const b = value === true || value === "true"
       return (
         <span className={cn("inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium", b ? "bg-success-bg text-success" : "bg-[var(--surface-3)] text-[var(--text-muted)]")}>
@@ -45,7 +62,7 @@ function formatCell(value: unknown, type: ColType): React.ReactNode {
       )
     }
     default: {
-      const s = String(value)
+      const s = formatUnknownForUi(value)
       if (s.length > 40) {
         return <span title={s}>{s.slice(0, 40)}…</span>
       }

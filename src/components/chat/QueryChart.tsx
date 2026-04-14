@@ -12,6 +12,7 @@ import {
 import type { TooltipContentProps } from "recharts"
 import type { ValueType, NameType } from "recharts/types/component/DefaultTooltipContent"
 import type { ChartConfig } from "@/types"
+import { formatUnknownForUi } from "@/lib/formatDisplayValue"
 
 const BRAND = "#7c3aed"
 const BRAND_MID = "#8b5cf6"
@@ -37,16 +38,18 @@ function pickDateFormat(values: string[]): string {
 }
 
 function formatAxisValue(value: unknown): string {
+  if (value != null && typeof value === "object") return truncate(formatUnknownForUi(value), 12)
   const n = Number(value)
-  if (isNaN(n)) return String(value)
+  if (isNaN(n)) return formatUnknownForUi(value)
   if (Math.abs(n) >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
   if (Math.abs(n) >= 1_000) return `${(n / 1_000).toFixed(1)}K`
   return n.toLocaleString("en-US", { maximumFractionDigits: 2 })
 }
 
 function formatTooltipValue(value: unknown, col: string): string {
+  if (value != null && typeof value === "object") return formatUnknownForUi(value)
   const n = Number(value)
-  if (isNaN(n)) return String(value)
+  if (isNaN(n)) return formatUnknownForUi(value)
   const formatted = n.toLocaleString("en-US", { maximumFractionDigits: 2 })
   if (isCurrencyCol(col)) return `$${formatted}`
   if (isPercentCol(col)) return `${formatted}%`
@@ -62,7 +65,7 @@ function makeTooltip(yKey: string) {
     if (!active || !payload?.length) return null
     return (
       <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-lg px-3 py-2 max-w-[200px]">
-        <p className="text-[11px] text-[var(--text-muted)] mb-0.5 truncate">{String(label)}</p>
+        <p className="text-[11px] text-[var(--text-muted)] mb-0.5 truncate">{typeof label === "object" && label != null ? formatUnknownForUi(label) : String(label)}</p>
         <p className="font-mono text-sm font-semibold text-[var(--text)]">
           {formatTooltipValue(payload[0].value, yKey)}
         </p>
@@ -91,7 +94,7 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
         const parsed = parseISO(xRaw)
         xVal = isValid(parsed) ? formatDate(parsed, dateFmt) : String(xRaw)
       } else {
-        xVal = String(xRaw ?? "")
+        xVal = xRaw == null ? "" : typeof xRaw === "object" ? formatUnknownForUi(xRaw) : String(xRaw)
       }
       const yRaw = row[y_field]
       const yVal = !isNaN(Number(yRaw)) ? parseFloat(String(yRaw)) : yRaw
