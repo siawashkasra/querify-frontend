@@ -1,6 +1,8 @@
+import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { HELP_CATEGORIES, getCategoryById } from "@/lib/help/categories"
+import { createMetadata } from "@/lib/seo"
 import { getArticlesByCategory } from "@/lib/help/loadContent"
 import HelpBreadcrumb from "@/components/help/HelpBreadcrumb"
 import BreadcrumbJsonLd from "@/components/help/BreadcrumbJsonLd"
@@ -9,11 +11,15 @@ export function generateStaticParams() {
   return HELP_CATEGORIES.map((c) => ({ category: c.id }))
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ category: string }> }) {
+export async function generateMetadata({ params }: { params: Promise<{ category: string }> }): Promise<Metadata> {
   const { category } = await params
   const def = getCategoryById(category)
-  if (!def) return { title: "Help · Querify" }
-  return { title: `${def.name} · Help · Querify`, description: def.description }
+  if (!def) return { title: { absolute: "Help · Querify" } }
+  return createMetadata({
+    title: `${def.name} · Help · Querify`,
+    description: def.description,
+    path: `/help/${category}`,
+  })
 }
 
 export default async function HelpCategoryPage({ params }: { params: Promise<{ category: string }> }) {

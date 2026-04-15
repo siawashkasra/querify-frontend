@@ -1,3 +1,4 @@
+import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { format, parseISO } from "date-fns"
 import { getArticle, getAllArticleParams, getRelatedArticles } from "@/lib/help/loadContent"
@@ -7,16 +8,22 @@ import HelpBreadcrumb from "@/components/help/HelpBreadcrumb"
 import BreadcrumbJsonLd from "@/components/help/BreadcrumbJsonLd"
 import ArticleFeedback from "@/components/help/ArticleFeedback"
 import RelatedArticles from "@/components/help/RelatedArticles"
+import ArticleJsonLd from "@/components/seo/ArticleJsonLd"
+import { createMetadata } from "@/lib/seo"
 
 export function generateStaticParams() {
   return getAllArticleParams()
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ category: string; slug: string }> }) {
+export async function generateMetadata({ params }: { params: Promise<{ category: string; slug: string }> }): Promise<Metadata> {
   const { category, slug } = await params
   const article = getArticle(category, slug)
-  if (!article) return { title: "Help · Querify" }
-  return { title: `${article.frontmatter.title} · Querify Help`, description: article.frontmatter.description }
+  if (!article) return { title: { absolute: "Help · Querify" } }
+  return createMetadata({
+    title: `${article.frontmatter.title} · Querify Help`,
+    description: article.frontmatter.description,
+    path: `/help/${category}/${slug}`,
+  })
 }
 
 export default async function HelpArticlePage({ params }: { params: Promise<{ category: string; slug: string }> }) {
@@ -33,6 +40,7 @@ export default async function HelpArticlePage({ params }: { params: Promise<{ ca
   }
   return (
     <div className="mx-auto max-w-6xl px-4 pb-16 pt-8 md:pb-24 md:pt-12">
+      <ArticleJsonLd title={article.frontmatter.title} description={article.frontmatter.description} path={`/help/${category}/${slug}`} dateModified={article.frontmatter.updated} />
       <BreadcrumbJsonLd items={[{ name: "Help", path: "/help" }, { name: cat.name, path: `/help/${category}` }, { name: article.frontmatter.title, path: `/help/${category}/${slug}` }]} />
       <HelpBreadcrumb items={[{ label: "Help", href: "/help" }, { label: cat.name, href: `/help/${category}` }, { label: article.frontmatter.title }]} />
       <h1 className="mt-6 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">{article.frontmatter.title}</h1>

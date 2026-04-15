@@ -1,4 +1,8 @@
+import type { Metadata } from "next"
 import { HELP_CATEGORIES } from "@/lib/help/categories"
+import { createMetadata, PAGE_SEO } from "@/lib/seo"
+
+export const metadata: Metadata = createMetadata({ ...PAGE_SEO.help, path: "/help" })
 import { buildSearchIndex, getArticlesByCategory, getPopularInCategory } from "@/lib/help/loadContent"
 import HelpSearch from "@/components/help/HelpSearch"
 import HelpCategoryCards from "@/components/help/HelpCategoryCards"

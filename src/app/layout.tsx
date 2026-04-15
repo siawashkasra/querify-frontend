@@ -1,16 +1,29 @@
 import type { Metadata } from "next"
+import { Inter } from "next/font/google"
 import "./globals.css"
 import Providers from "./providers"
+import { mergeRootMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = {
-  title: "Querify — AI Analytics for SaaS Founders",
-  description: "Ask questions about your data in plain English. No SQL required.",
-}
+const inter = Inter({ subsets: ["latin"], display: "swap" })
+
+export const metadata: Metadata = mergeRootMetadata()
+
+const posthogOrigin = (() => {
+  const h = process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://us.i.posthog.com"
+  try {
+    return new URL(h.startsWith("http") ? h : `https://${h}`).origin
+  } catch {
+    return "https://us.i.posthog.com"
+  }
+})()
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="h-full scroll-smooth">
-      <body className="min-h-full flex flex-col antialiased">
+      <head>
+        <link rel="preconnect" href={posthogOrigin} crossOrigin="anonymous" />
+      </head>
+      <body className={`min-h-full flex flex-col antialiased ${inter.className}`}>
         <Providers>{children}</Providers>
       </body>
     </html>

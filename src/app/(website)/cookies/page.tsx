@@ -1,11 +1,13 @@
 import type { Metadata } from "next"
 import LegalDocument from "@/components/website/legal/LegalDocument"
 import { LEGAL_LAST_UPDATED_ISO, LEGAL_LAST_UPDATED_LABEL } from "@/components/website/legal/lastUpdated"
+import { createMetadata } from "@/lib/seo"
 
-export const metadata: Metadata = {
+export const metadata: Metadata = createMetadata({
   title: "Cookie Policy — Querify",
   description: "PLACEHOLDER — How Querify uses cookies and similar technologies. Draft pending legal review.",
-}
+  path: "/cookies",
+})
 
 const ph = <span className="font-semibold text-amber-800">PLACEHOLDER.</span>
 

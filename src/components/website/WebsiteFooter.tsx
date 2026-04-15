@@ -17,6 +17,7 @@ export default function WebsiteFooter() {
               <li><Link href="/how-it-works" className="text-sm text-slate-700 transition-colors hover:text-web-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-web-brand rounded-sm">How it works</Link></li>
               <li><Link href="/pricing" className="text-sm text-slate-700 transition-colors hover:text-web-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-web-brand rounded-sm">Pricing</Link></li>
               <li><Link href="/security" className="text-sm text-slate-700 transition-colors hover:text-web-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-web-brand rounded-sm">Security</Link></li>
+              <li><Link href="/blog" className="text-sm text-slate-700 transition-colors hover:text-web-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-web-brand rounded-sm">Blog</Link></li>
               <li><Link href="/changelog" className="text-sm text-slate-700 transition-colors hover:text-web-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-web-brand rounded-sm">Changelog</Link></li>
             </ul>
           </div>
