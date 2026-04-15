@@ -1,0 +1,45 @@
+---
+title: "Connect your PostgreSQL database"
+description: "Enter host, port, database name, and credentials. We verify read-only access before introspection runs."
+updated: "2026-04-15"
+readTime: 6
+order: 1
+---
+
+## Before you start
+
+You need:
+
+- Hostname or IP of your PostgreSQL server
+- Port (default `5432` if you are unsure)
+- Database name
+- Username and password for a user that can connect (we recommend a dedicated read-only user)
+
+## Step 1 — Open Connections in Querify
+
+In the Querify app, go to **Settings → Connections** and choose **Add connection**.
+
+## Step 2 — Enter connection details
+
+Fill in each field:
+
+| Field | What to enter |
+| --- | --- |
+| Host | Your server hostname or IP |
+| Port | Usually `5432` |
+| Database | The database name you want to query |
+| Username | Database user (read-only recommended) |
+| Password | That user’s password |
+
+Use **Test connection** to confirm we can reach your database. If the test succeeds, we still only use read-only queries from this point on.
+
+## Step 3 — Save and connect
+
+Choose **Save and connect**. Querify verifies that the account is read-only before we run anything heavier.
+
+## What happens next
+
+1. **Schema introspection** — We discover tables, columns, and relationships so questions map to real fields.
+2. **First insights** — When enough metadata is available, Querify can surface automatic insights about trends and anomalies.
+
+Typical first connection takes about a minute end-to-end. If something fails, see [Connection failing](/help/troubleshooting/connection-failing) or email [support@querify.ai](mailto:support@querify.ai).

@@ -1,0 +1,17 @@
+---
+title: "Permission denied errors"
+description: "When Querify cannot read a table or schema your question needs."
+updated: "2026-04-15"
+readTime: 3
+order: 3
+---
+
+## What it means
+
+The database user connected to Querify does not have `SELECT` on one or more objects your question needs.
+
+## How to fix
+
+Grant `SELECT` on the relevant schema or tables to your read-only user (see [read-only user](/help/database-setup/read-only-user)). If you use multiple schemas, repeat grants for each schema.
+
+After changing grants, reconnect in Querify or run a new question.

@@ -1,0 +1,52 @@
+---
+title: "Create a read-only PostgreSQL user"
+description: "Copy-paste SQL to create a dedicated user with SELECT-only access. No advanced SQL knowledge required."
+updated: "2026-04-15"
+readTime: 7
+order: 1
+---
+
+## Why a dedicated user
+
+A separate user with only `SELECT` limits what Querify can ever do, even if something went wrong upstream. Run the commands below as a superuser (often `postgres`) in `psql` or any SQL console connected to your database.
+
+Replace placeholders:
+
+- `querify_readonly` — username you want
+- `your_strong_password` — a long random password
+- `your_database` — database name
+
+## Create the user
+
+```sql
+CREATE USER querify_readonly WITH PASSWORD 'your_strong_password';
+```
+
+## Allow connection and usage
+
+```sql
+GRANT CONNECT ON DATABASE your_database TO querify_readonly;
+\c your_database
+GRANT USAGE ON SCHEMA public TO querify_readonly;
+```
+
+## Grant read access to existing tables
+
+```sql
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO querify_readonly;
+```
+
+## Future tables (optional)
+
+So new tables are readable automatically:
+
+```sql
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+GRANT SELECT ON TABLES TO querify_readonly;
+```
+
+## Use in Querify
+
+In the connection form, set **username** to `querify_readonly` and the password you chose. Run **Test connection** before saving.
+
+If your schema is not `public`, repeat `GRANT` for each schema you need. For help, email [support@querify.ai](mailto:support@querify.ai).

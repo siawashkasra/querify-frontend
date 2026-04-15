@@ -1,0 +1,17 @@
+---
+title: "Connection checklist"
+description: "A quick checklist before you save a new database connection."
+updated: "2026-04-15"
+readTime: 2
+order: 3
+---
+
+## Before you click Save
+
+- [ ] Database is reachable from the public internet **or** you have a tunnel that Querify can use
+- [ ] User is read-only (`SELECT` only)
+- [ ] Host, port, database name, and password are correct
+- [ ] SSL mode matches your provider (often **require** for production)
+- [ ] Firewall allowlists Querify’s IPs if you use IP filtering
+
+If **Test connection** fails, see [Connection failing](/help/troubleshooting/connection-failing).

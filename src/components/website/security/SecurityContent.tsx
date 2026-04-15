@@ -39,7 +39,7 @@ export default function SecurityContent() {
             <p>We store what we need to keep your connection working: the encrypted secret, host, database name, and non-secret metadata. We do not store unnecessary copies of your data or credentials beyond what is required for the service.</p>
             <p>
               For the strongest security model, use a dedicated database user with SELECT-only permissions.{" "}
-              <Link href="/help/read-only-user" className="font-semibold text-web-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-web-brand rounded-sm">
+              <Link href="/help/database-setup/read-only-user" className="font-semibold text-web-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-web-brand rounded-sm">
                 Follow our read-only user guide
               </Link>
               {" "}to set that up in minutes.

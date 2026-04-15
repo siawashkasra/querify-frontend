@@ -1,0 +1,47 @@
+---
+title: "IP allowlisting for Querify"
+description: "Static egress IPs and how to allowlist them on AWS RDS, Supabase, Railway, and self-hosted PostgreSQL."
+updated: "2026-04-15"
+readTime: 6
+order: 2
+---
+
+## Static IP addresses
+
+Querify uses fixed outbound IP addresses so you can lock your database firewall to our traffic only. **The exact IPs for your workspace are shown in Settings → Connections → Network** (copy from the product — they may change per region).
+
+If you do not see IPs yet, contact [support@querify.ai](mailto:support@querify.ai) with your workspace name.
+
+## AWS RDS
+
+1. Open the RDS instance → **Connectivity & security**.
+2. Under **Security**, edit the VPC security group.
+3. Add an inbound rule: **PostgreSQL** (5432), source = Querify’s IP /32 (one rule per IP we give you).
+
+Restrict source to those IPs only if you want a tight allowlist.
+
+## Supabase
+
+1. Project **Settings → Database**.
+2. Under **Connection pooling** or **Network restrictions**, add the Querify IPs to allowed addresses (wording varies by plan).
+
+Managed Supabase sometimes uses “allowed CIDRs” — enter each IP as `x.x.x.x/32`.
+
+## Railway
+
+1. Open your PostgreSQL plugin → **Variables** or **Networking**.
+2. If Railway exposes **Public networking** or **TCP proxy**, add Querify’s IPs to any allowlist the provider shows.
+
+Self-hosted Postgres behind Railway’s private network may need a tunnel or public proxy — ask your infra team if unsure.
+
+## Self-hosted
+
+On Linux, if you use `pg_hba.conf`:
+
+```
+hostssl your_database querify_readonly x.x.x.x/32 scram-sha-256
+```
+
+Reload PostgreSQL after editing. Match authentication method to what you use (`scram-sha-256` or `md5`).
+
+Always prefer **SSL** for connections from the public internet.

@@ -22,7 +22,7 @@ export default function HowItWorksContent() {
               <p>Takes 60 seconds. We verify read-only access before proceeding.</p>
               <p>We recommend creating a dedicated read-only user — our guide walks you through it.</p>
               <p>
-                <Link href="/help/read-only-user" className="font-semibold text-web-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-web-brand rounded-sm">
+                <Link href="/help/database-setup/read-only-user" className="font-semibold text-web-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-web-brand rounded-sm">
                   Read-only user setup guide
                 </Link>
               </p>

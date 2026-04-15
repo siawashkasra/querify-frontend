@@ -1,0 +1,62 @@
+---
+title: "Connection failing"
+description: "DNS, authentication, SSL, and timeout errors — what they mean and how to fix them."
+updated: "2026-04-15"
+readTime: 8
+order: 1
+---
+
+## Start here
+
+Note the **exact error message** from Querify (or your database logs). Use the table below to jump to the right section.
+
+| Symptom | Likely cause | First step |
+| --- | --- | --- |
+| Host not found / DNS | Wrong hostname or private hostname from outside VPC | Use public hostname or VPN/tunnel |
+| Password authentication failed | Wrong user or password | Reset password, check user exists |
+| SSL required / certificate mismatch | SSL mode does not match server | Set SSL to **require** or **verify-full** per provider |
+| Connection timed out | Firewall, security group, or wrong port | Open port 5432 to Querify IPs; confirm port |
+
+## DNS failed
+
+**What it means:** The hostname you entered does not resolve, or resolves to an address your network cannot reach.
+
+**How to fix:**
+
+- Copy the host string from your provider without extra spaces.
+- If you use a **private** hostname (e.g. `*.rds.amazonaws.com` only inside a VPC), Querify cannot reach it unless you expose a public endpoint or use a tunnel.
+- Try `ping` or `nslookup` from your laptop to confirm the name resolves.
+
+## Authentication failed
+
+**What it means:** PostgreSQL rejected the username/password combination, or the user cannot connect to that database.
+
+**How to fix:**
+
+- Reset the password in your provider and paste it again in Querify.
+- Confirm the user has `CONNECT` on the database and `USAGE` on the schema.
+- If you use a read-only user, see [Create a read-only PostgreSQL user](/help/database-setup/read-only-user).
+
+## SSL mismatch
+
+**What it means:** The server requires TLS and the client offered none, or certificate verification failed.
+
+**How to fix:**
+
+- Set SSL mode to **require** at minimum.
+- For **verify-full**, ensure the server hostname matches the certificate CN/SAN.
+- Some providers need you to download a CA bundle — add it in advanced settings if Querify exposes that field.
+
+## Timeout
+
+**What it means:** The TCP connection never completed — often firewall, wrong IP allowlist, or wrong port.
+
+**How to fix:**
+
+- Confirm **5432** (or your custom port) is open to Querify’s egress IPs.
+- [See IP allowlisting](/help/database-setup/ip-whitelisting) for AWS, Supabase, and Railway patterns.
+- If the database is `localhost only`, it is not reachable from the internet — use a tunnel or a hosted instance.
+
+## Still stuck?
+
+Email [support@querify.ai](mailto:support@querify.ai) with your workspace name and a screenshot of the error (redact secrets).
