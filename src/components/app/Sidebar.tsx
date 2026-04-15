@@ -13,7 +13,7 @@ import type { Connection, Insight } from "@/types"
 const cn = (...inputs: Parameters<typeof clsx>) => twMerge(clsx(inputs))
 
 const NAV_ITEMS = [
-  { label: "Dashboard", icon: LayoutDashboard, href: "/" },
+  { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { label: "New Chat", icon: MessageSquarePlus, href: "/chat/new" },
   { label: "History", icon: Clock, href: "/history" },
   { label: "Insights", icon: Sparkles, href: "/insights" },
@@ -56,7 +56,7 @@ export const Sidebar = () => {
 
       <nav className="flex-1 px-2 py-3 flex flex-col gap-0.5">
         {NAV_ITEMS.map(({ label, icon: Icon, href }) => {
-          const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href)
+          const isActive = href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href)
           const showBadge = label === "Insights" && unreadCount > 0
           return (
             <Link

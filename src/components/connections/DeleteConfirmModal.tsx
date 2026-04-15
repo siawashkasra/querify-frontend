@@ -30,7 +30,7 @@ export const DeleteConfirmModal = ({ connection, onClose }: DeleteConfirmModalPr
       toast.success(`"${connection!.name}" deleted`)
       if (activeConnectionId === connection!.id) {
         setActiveConnection(null)
-        router.push("/")
+        router.push("/dashboard")
       }
       onClose()
     },

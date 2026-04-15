@@ -9,7 +9,7 @@ import Badge from "@/components/ui/Badge"
 import type { Connection } from "@/types"
 
 const PAGE_TITLES: Record<string, string> = {
-  "/": "Dashboard",
+  "/dashboard": "Dashboard",
   "/chat/new": "New Chat",
   "/history": "History",
   "/settings": "Settings",

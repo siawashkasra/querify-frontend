@@ -51,7 +51,7 @@ test.describe("Phase 3: Onboarding journey", () => {
   test("Correction is detected and acknowledged in chat", async ({ page }) => {
     test.setTimeout(90_000)
 
-    await page.goto("/")
+    await page.goto("/dashboard")
     const hasConnection = await page.getByText(/your database is ready/i).isVisible({ timeout: 5_000 }).catch(() => false)
     if (!hasConnection) {
       test.skip(true, "No active connection available for correction test")
