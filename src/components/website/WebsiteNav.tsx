@@ -62,11 +62,11 @@ export default function WebsiteNav() {
               Log in
             </Link>
             <Link
-              href="/settings/connections/new"
-              className="rounded-lg bg-web-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-web-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-web-brand focus-visible:ring-offset-2"
-            >
-              Connect your database free
-            </Link>
+            href="/signup"
+            className="rounded-lg bg-web-brand px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-web-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-web-brand focus-visible:ring-offset-2"
+          >
+            Connect your database free
+          </Link>
           </div>
           <button
             type="button"
@@ -106,7 +106,7 @@ export default function WebsiteNav() {
               Log in
             </Link>
             <Link
-              href="/settings/connections/new"
+              href="/signup"
               onClick={() => setOpen(false)}
               className="mt-2 rounded-lg bg-web-brand px-4 py-3 text-center text-base font-semibold text-white hover:bg-web-brand-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-web-brand focus-visible:ring-offset-2"
             >
