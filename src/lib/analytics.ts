@@ -1,7 +1,7 @@
-type PhInstance = { capture: (event: string, properties?: Record<string, unknown>) => void }
+import posthog from "posthog-js"
 
 export const track = (event: string, properties?: Record<string, unknown>): void => {
   if (typeof window === "undefined") return
-  const ph = (window as unknown as Record<string, unknown>).posthog as PhInstance | undefined
-  if (ph && typeof ph.capture === "function") ph.capture(event, properties)
+  if (!posthog.__loaded) return
+  posthog.capture(event, properties)
 }
