@@ -9,10 +9,12 @@ import type {
   ChatMessage,
   QueryResult,
   Insight,
+  InsightChartDataPayload,
   ExportJob,
   PaginatedResponse,
   PipelineStatus,
   SuggestedQuestion,
+  InsightGenerationStatus,
 } from "@/types"
 
 const http = axios.create({
@@ -90,6 +92,8 @@ export const connections = {
   pipelineStatus: (id: string) => get<PipelineStatus>(`/api/v1/connections/${id}/pipeline-status`),
   corrections: (id: string) => get<unknown[]>(`/api/v1/connections/${id}/corrections`),
   suggestedQuestions: (id: string) => get<SuggestedQuestion[]>(`/api/v1/connections/${id}/suggested-questions`),
+  generateInsights: (id: string) => post<{ queued: boolean; estimated_completion_seconds: number }>(`/api/v1/connections/${id}/insights/generate`),
+  insightGenerationStatus: (id: string) => get<InsightGenerationStatus>(`/api/v1/connections/${id}/insights/status`),
 }
 
 export const query = {
@@ -118,10 +122,17 @@ export const query = {
 export const insights = {
   list: (connection_id?: string, unread_only?: boolean) =>
     get<Insight[]>("/api/v1/insights", { ...(connection_id ? { connection_id } : {}), ...(unread_only ? { unread_only: true } : {}) }),
-  get: (id: string) => get<Insight>(`/api/v1/insights/${id}`),
+  chartData: (id: string, period: string) =>
+    get<InsightChartDataPayload>(`/api/v1/insights/${id}/chart-data`, { period }),
   markRead: (id: string) => post<Insight>(`/api/v1/insights/${id}/read`),
   markAllRead: (connection_id?: string) => post<{ updated: number }>("/api/v1/insights/read-all", connection_id ? { connection_id } : {}),
   dismiss: (id: string) => del<void>(`/api/v1/insights/${id}`),
+  submitFeedback: (connection_id: string, insight_id: string, data: { feedback_score: 1 | -1; is_user_defined_metric: boolean }) =>
+    post<{ success: boolean; needs_context_review: boolean }>(`/api/v1/connections/${connection_id}/insights/${insight_id}/feedback`, data),
+  flagContextReview: (connection_id: string, insight_id: string) =>
+    post<{ success: boolean }>(`/api/v1/connections/${connection_id}/insights/${insight_id}/feedback`, { feedback_score: -1, is_user_defined_metric: true }),
+  getPerformance: (connection_id: string) =>
+    get<import("@/types").InsightPerformanceData>(`/api/v1/connections/${connection_id}/insight-performance`),
 }
 
 export const exports = {

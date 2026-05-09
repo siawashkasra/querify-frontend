@@ -88,6 +88,13 @@ export interface ChartConfig {
   x_field: string
   y_field: string
   title?: string | null
+  x_axis?: string | null
+  y_axis?: string | null
+  data?: Record<string, unknown>[] | null
+  format?: string | null
+  highlight_last?: boolean
+  highlight_first?: boolean
+  orientation?: string | null
 }
 
 export interface ChatMessage {
@@ -111,6 +118,15 @@ export interface ChatMessage {
   created_at: string
 }
 
+export interface AnalyticalSubQuery {
+  question: string
+  metric: string
+  sql: string | null
+  columns: string[]
+  rows: unknown[][]
+  error: string | null
+}
+
 export interface QueryResult {
   message_id: string
   status: MessageStatus
@@ -128,9 +144,12 @@ export interface QueryResult {
   total_ms: number | null
   model_used?: string | null
   feedback_score?: 1 | -1 | null
+  response_type?: "standard" | "analytical" | "correction_acknowledged"
+  analytical_narrative?: string | null
+  analytical_sub_queries?: AnalyticalSubQuery[]
 }
 
-export type InsightType = "revenue_trend" | "new_users" | "churn_signal" | "top_performer" | "anomaly"
+export type InsightType = "revenue_trend" | "new_users" | "churn_signal" | "top_performer" | "anomaly" | "recurring_question"
 export type InsightConfidence = "high" | "medium" | "low"
 
 export interface Insight {
@@ -139,16 +158,46 @@ export interface Insight {
   type: InsightType
   headline: string
   summary: string
+  recommendation?: string | null
   chart_config: ChartConfig | null
   data_snapshot: Record<string, unknown> | null
   confidence: InsightConfidence
   is_read: boolean
+  is_urgent: boolean
+  feedback_score: 1 | -1 | null
+  needs_context_review: boolean
+  is_user_defined_metric?: boolean
   generated_at: string
   title?: string
   description?: string
   severity?: InsightSeverity
   read?: boolean
   created_at?: string
+}
+
+export interface InsightChartDataPayload {
+  data: Record<string, unknown>[]
+}
+
+export interface GeneratorPerformanceStat {
+  positive_rate: number
+  sample_size: number
+}
+
+export interface InsightPerformanceData {
+  connection_id: string
+  generator_performance: Record<string, GeneratorPerformanceStat>
+}
+
+export interface InsightGenerationStatus {
+  state: "idle" | "queued" | "running" | "completed" | "failed"
+  progress_pct: number
+  message: string
+  started_at?: string | null
+  updated_at?: string | null
+  finished_at?: string | null
+  generated?: number | null
+  failed?: number | null
 }
 
 export interface ExportJob {

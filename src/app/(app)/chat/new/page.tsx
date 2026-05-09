@@ -81,10 +81,16 @@ function NewChatPage() {
   })
 
   useEffect(() => {
+    const draftParam = searchParams.get("draft")
+    if (!draftParam) return
+    queueMicrotask(() => inputRef.current?.setValue(draftParam))
+  }, [searchParams])
+
+  useEffect(() => {
     if (autoSubmitDone.current) return
     const promptParam = searchParams.get("prompt")
     const connParam = searchParams.get("connection")
-    if (!promptParam) return
+    if (!promptParam || searchParams.get("draft")) return
     autoSubmitDone.current = true
     if (connParam && connParam !== activeConnectionId) setActiveConnection(connParam)
     handleSubmit(promptParam)

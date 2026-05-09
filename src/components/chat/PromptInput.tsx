@@ -6,6 +6,7 @@ import { cn } from "@/lib/cn"
 
 export interface PromptInputHandle {
   focus: () => void
+  setValue: (value: string) => void
 }
 
 interface PromptInputProps {
@@ -19,7 +20,7 @@ export const PromptInput = forwardRef<PromptInputHandle, PromptInputProps>(({ on
   const [value, setValue] = useState("")
   const ref = useRef<HTMLTextAreaElement>(null)
 
-  useImperativeHandle(fwdRef, () => ({ focus: () => ref.current?.focus() }), [])
+  useImperativeHandle(fwdRef, () => ({ focus: () => ref.current?.focus(), setValue: (v: string) => setValue(v) }), [])
 
   useEffect(() => {
     if (!loading) ref.current?.focus()

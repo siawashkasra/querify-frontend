@@ -1,3 +1,4 @@
+import { InsightCardSkeleton } from "@/components/insights/InsightCardSkeleton"
 import { cn } from "@/lib/cn"
 
 interface SkeletonProps { className?: string }
@@ -36,14 +37,7 @@ export const SkeletonRow = ({ className }: SkeletonProps) => (
   </div>
 )
 
-export const SkeletonInsightCard = ({ className }: SkeletonProps) => (
-  <div className={cn("rounded-lg border border-[var(--border)] bg-white p-4 flex flex-col gap-2 min-w-[220px]", className)}>
-    <Skeleton className="h-5 w-14" />
-    <Skeleton className="h-4 w-full" />
-    <Skeleton className="h-4 w-3/4" />
-    <Skeleton className="h-3 w-20 mt-1" />
-  </div>
-)
+export const SkeletonInsightCard = ({ className }: SkeletonProps) => <InsightCardSkeleton className={className} />
 
 export const SkeletonChart = ({ className }: SkeletonProps) => (
   <div className={cn("flex flex-col gap-2", className)}>

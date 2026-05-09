@@ -6,15 +6,17 @@ import { cn } from "@/lib/cn"
 import TypingIndicator from "./TypingIndicator"
 import ResultCard from "./ResultCard"
 import ErrorCard from "./ErrorCard"
+import AnalyticalResponseCard from "./AnalyticalResponseCard"
 import type { ThreadMessage } from "@/store/chatStore"
 
 interface MessageThreadProps {
   messages: ThreadMessage[]
   onFollowUp?: () => void
   onRetry?: (prompt: string) => void
+  onSuggestedQuestion?: (question: string) => void
 }
 
-export const MessageThread = ({ messages, onFollowUp, onRetry }: MessageThreadProps) => {
+export const MessageThread = ({ messages, onFollowUp, onRetry, onSuggestedQuestion }: MessageThreadProps) => {
   const bottomRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -58,7 +60,11 @@ export const MessageThread = ({ messages, onFollowUp, onRetry }: MessageThreadPr
               )}
               {!msg.loading && !msg.error && !msg.errorType && msg.result && (
                 <div className="bg-[var(--surface-2)] border border-[var(--border)] rounded-2xl rounded-tl-sm px-4 py-3">
-                  <ResultCard result={msg.result} onFollowUp={onFollowUp} />
+                  {msg.result.response_type === "analytical" ? (
+                    <AnalyticalResponseCard result={msg.result} onSuggestedQuestion={onSuggestedQuestion} />
+                  ) : (
+                    <ResultCard result={msg.result} onFollowUp={onFollowUp} />
+                  )}
                 </div>
               )}
             </div>
