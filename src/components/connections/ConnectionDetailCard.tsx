@@ -9,6 +9,7 @@ import { connections as connectionsApi } from "@/lib/api"
 import { cn } from "@/lib/cn"
 import Badge from "@/components/ui/Badge"
 import Spinner from "@/components/ui/Spinner"
+import { DbTypeBadge } from "@/components/connections/DbTypeBadge"
 import type { Connection, ConnectionStatus } from "@/types"
 
 const STATUS_CFG: Record<ConnectionStatus, { dot: string; badge: "active" | "degraded" | "inactive" | "pending" }> = {
@@ -116,7 +117,7 @@ export const ConnectionDetailCard = ({ connection, onEdit, onDelete }: Connectio
         <div className="flex items-center gap-2">
           <span className={cn("h-2 w-2 rounded-full shrink-0", cfg.dot)} />
           <Badge variant={cfg.badge}>{connection.status}</Badge>
-          <Badge variant="default">{connection.db_type}</Badge>
+          <DbTypeBadge dbType={connection.db_type} />
         </div>
       </div>
 

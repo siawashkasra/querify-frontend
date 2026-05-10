@@ -7,14 +7,15 @@ import { useAppStore } from "@/store/appStore"
 import { useQueryClient } from "@tanstack/react-query"
 import toast from "react-hot-toast"
 import Stepper from "@/components/connections/Stepper"
+import DbTypeSelector, { type DbTypeValue } from "@/components/connections/DbTypeSelector"
 import StepDetails, { type ConnectionFormData } from "@/components/connections/StepDetails"
 import StepReview from "@/components/connections/StepReview"
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress"
 import { InsightsReveal, FallbackState } from "@/components/onboarding/InsightsReveal"
 
-type Phase = "form" | "review" | "progress" | "reveal" | "fallback"
+type Phase = "type" | "form" | "review" | "progress" | "reveal" | "fallback"
 
-const STEPS = ["Connection details", "Review", "Setup"]
+const STEPS = ["Database type", "Connection details", "Review", "Setup"]
 
 const DEFAULT_FORM: ConnectionFormData = {
   name: "",
@@ -25,13 +26,14 @@ const DEFAULT_FORM: ConnectionFormData = {
   username: "",
   password: "",
   ssl_mode: "prefer",
+  instance_name: "",
 }
 
 export default function NewConnectionPage() {
   const router = useRouter()
   const qc = useQueryClient()
   const setActiveConnection = useAppStore((s) => s.setActiveConnection)
-  const [phase, setPhase] = useState<Phase>("form")
+  const [phase, setPhase] = useState<Phase>("type")
   const [form, setForm] = useState<ConnectionFormData>(DEFAULT_FORM)
   const [testPassed, setTestPassed] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -39,11 +41,17 @@ export default function NewConnectionPage() {
   const [fallbackReason, setFallbackReason] = useState("")
   const revealStartMs = useRef(0)
 
-  const stepIndex = phase === "form" ? 0 : phase === "review" ? 1 : 2
+  const stepIndex = phase === "type" ? 0 : phase === "form" ? 1 : phase === "review" ? 2 : 3
 
   const updateForm = useCallback((patch: Partial<ConnectionFormData>) => {
     setForm((prev) => ({ ...prev, ...patch }))
     setTestPassed(false)
+  }, [])
+
+  const handleTypeConfirm = useCallback((dbType: DbTypeValue, defaultPort: number, defaultSsl: string) => {
+    setForm((prev) => ({ ...prev, db_type: dbType, port: defaultPort, ssl_mode: defaultSsl }))
+    setTestPassed(false)
+    setPhase("form")
   }, [])
 
   const handleTestSuccess = useCallback(() => setTestPassed(true), [])
@@ -51,14 +59,18 @@ export default function NewConnectionPage() {
   const handleSave = async () => {
     setSaving(true)
     try {
+      const extra_params: Record<string, unknown> = {}
+      if (form.instance_name?.trim()) extra_params.instance_name = form.instance_name.trim()
       const conn = await connections.create({
         name: form.name,
+        db_type: form.db_type,
         host: form.host,
         port: form.port,
         database: form.database,
         username: form.username,
         password: form.password,
         ssl_mode: form.ssl_mode,
+        ...(Object.keys(extra_params).length > 0 ? { extra_params } : {}),
       }) as { id: string }
       setSavedId(conn.id)
       setActiveConnection(conn.id)
@@ -118,6 +130,10 @@ export default function NewConnectionPage() {
         </div>
 
         <Stepper steps={STEPS} current={stepIndex} />
+
+        {phase === "type" && (
+          <DbTypeSelector onNext={handleTypeConfirm} />
+        )}
 
         {phase === "form" && (
           <StepDetails

@@ -1,0 +1,68 @@
+---
+title: "Create a read-only MySQL user"
+description: "Copy-paste SQL to create a dedicated MySQL user with SELECT-only access. Works with MySQL 5.7+, MySQL 8.0+, PlanetScale, and AWS RDS."
+updated: "2026-05-10"
+readTime: 5
+order: 2
+---
+
+## Why a dedicated user
+
+A separate user with only `SELECT` limits what Querify can ever do, even if something went wrong upstream. Run the commands below as an admin or root user in a MySQL console.
+
+Replace these placeholders in every command:
+
+- `querify_readonly` — the username you want
+- `your_strong_password` — a long random password
+- `your_database` — your database name
+- `%` — the host Querify connects from (use `%` to allow any host, or restrict to a specific IP)
+
+## Create the user
+
+```sql
+CREATE USER 'querify_readonly'@'%' IDENTIFIED BY 'your_strong_password';
+```
+
+For MySQL 8.0+ with `caching_sha2_password` compatibility issues, use:
+
+```sql
+CREATE USER 'querify_readonly'@'%' IDENTIFIED WITH mysql_native_password BY 'your_strong_password';
+```
+
+## Grant SELECT access
+
+```sql
+GRANT SELECT ON your_database.* TO 'querify_readonly'@'%';
+FLUSH PRIVILEGES;
+```
+
+To grant access to all databases (not recommended):
+
+```sql
+GRANT SELECT ON *.* TO 'querify_readonly'@'%';
+FLUSH PRIVILEGES;
+```
+
+## Verify the permissions
+
+```sql
+SHOW GRANTS FOR 'querify_readonly'@'%';
+```
+
+You should see `GRANT SELECT ON your_database.* TO ...`.
+
+## SSL configuration
+
+In the Querify connection form, set **SSL mode** to:
+
+- **Preferred** — connects with SSL if available (recommended)
+- **Required** — enforces SSL (use for AWS RDS, Google Cloud SQL, Azure)
+- **Verify CA** — verifies the server certificate (requires uploading a CA cert to your server config)
+
+## Use in Querify
+
+Set **username** to `querify_readonly` and the password you chose. Run **Test connection** before saving.
+
+If you see `Access denied for user`, double-check the `GRANT` was applied to the correct database and that `FLUSH PRIVILEGES` was run.
+
+For help, email [support@querify.ai](mailto:support@querify.ai).

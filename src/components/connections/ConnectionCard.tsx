@@ -4,6 +4,7 @@ import Link from "next/link"
 import { Database, MessageSquarePlus, Settings as SettingsIcon } from "lucide-react"
 import { cn } from "@/lib/cn"
 import Badge from "@/components/ui/Badge"
+import { DbTypeBadge } from "@/components/connections/DbTypeBadge"
 import { formatDistanceToNow } from "date-fns"
 import type { Connection, ConnectionStatus } from "@/types"
 
@@ -42,7 +43,7 @@ export const ConnectionCard = ({ connection, className }: ConnectionCardProps) =
       </div>
 
       <div className="flex items-center gap-4 text-xs text-[var(--text-muted)]">
-        <Badge variant="default">{connection.db_type}</Badge>
+        <DbTypeBadge dbType={connection.db_type} />
         {connection.context_version !== null && connection.context_version > 0 && (
           <span>v{connection.context_version} context</span>
         )}

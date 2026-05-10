@@ -1,11 +1,63 @@
 "use client"
 
 import { useState, useCallback, useRef } from "react"
-import { ThumbsUp, ThumbsDown, Download, MessageSquarePlus, Clock, Cpu, ChevronDown } from "lucide-react"
+import { ThumbsUp, ThumbsDown, Download, MessageSquarePlus, Clock, Cpu, ChevronDown, ShieldCheck, ShieldAlert, Shield, CheckCircle2, AlertTriangle } from "lucide-react"
 import { toast } from "react-hot-toast"
 import { query as queryApi, exports as exportsApi } from "@/lib/api"
 import { cn } from "@/lib/cn"
 import type { ExportJob } from "@/types"
+
+interface ConfidenceBadgeInlineProps {
+  level: "high" | "medium" | "low"
+  factors: string[]
+  caveats: string[]
+}
+
+function ConfidenceBadgeInline({ level, factors, caveats }: ConfidenceBadgeInlineProps) {
+  const [open, setOpen] = useState(false)
+  const cfg = {
+    high: { Icon: ShieldCheck, label: "High confidence", color: "text-success", bg: "bg-success/10 border-success/20" },
+    medium: { Icon: ShieldAlert, label: "Medium confidence", color: "text-warning", bg: "bg-warning/10 border-warning/20" },
+    low: { Icon: Shield, label: "Low confidence", color: "text-[var(--text-muted)]", bg: "bg-[var(--surface)] border-[var(--border)]" },
+  }[level]
+  const { Icon } = cfg
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen((o) => !o)} className={cn("flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-medium transition-colors", cfg.bg, cfg.color)} title="Why this confidence level?">
+        <Icon size={11} />
+        {cfg.label}
+      </button>
+      {open && (
+        <div className="absolute bottom-7 left-0 z-20 w-72 rounded-xl border border-[var(--border)] bg-white shadow-xl p-3 text-xs">
+          <p className="font-semibold text-[var(--text)] mb-2">Why this confidence level?</p>
+          {factors.length > 0 && (
+            <ul className="flex flex-col gap-1 mb-2">
+              {factors.map((f, i) => (
+                <li key={i} className="flex items-start gap-1.5 text-success">
+                  <CheckCircle2 size={11} className="mt-0.5 shrink-0" />
+                  <span className="text-[var(--text)]">{f}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {caveats.length > 0 && (
+            <ul className="flex flex-col gap-1">
+              {caveats.map((c, i) => (
+                <li key={i} className="flex items-start gap-1.5 text-warning">
+                  <AlertTriangle size={11} className="mt-0.5 shrink-0" />
+                  <span className="text-[var(--text-dim)]">{c}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {factors.length === 0 && caveats.length === 0 && (
+            <p className="text-[var(--text-muted)]">No scoring detail available.</p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 interface ResultFooterProps {
   messageId: string
@@ -14,9 +66,12 @@ interface ResultFooterProps {
   modelUsed?: string | null
   initialFeedback?: 1 | -1 | null
   onFollowUp?: () => void
+  confidenceLevel?: "high" | "medium" | "low" | null
+  confidenceFactors?: string[]
+  confidenceCaveats?: string[]
 }
 
-export const ResultFooter = ({ messageId, executionMs, totalMs, modelUsed, initialFeedback, onFollowUp }: ResultFooterProps) => {
+export const ResultFooter = ({ messageId, executionMs, totalMs, modelUsed, initialFeedback, onFollowUp, confidenceLevel, confidenceFactors = [], confidenceCaveats = [] }: ResultFooterProps) => {
   const [feedback, setFeedback] = useState<1 | -1 | null>(initialFeedback ?? null)
   const [exportOpen, setExportOpen] = useState(false)
   const exportRef = useRef<HTMLDivElement>(null)
@@ -75,6 +130,9 @@ export const ResultFooter = ({ messageId, executionMs, totalMs, modelUsed, initi
           <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-[var(--surface)] border border-[var(--border)]">
             <Cpu size={10} /> {modelUsed}
           </span>
+        )}
+        {confidenceLevel && (
+          <ConfidenceBadgeInline level={confidenceLevel} factors={confidenceFactors} caveats={confidenceCaveats} />
         )}
       </div>
 

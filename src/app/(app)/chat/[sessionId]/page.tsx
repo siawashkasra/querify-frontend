@@ -53,7 +53,7 @@ export default function ChatPage({ params }: ChatPageProps) {
         createdAt: new Date(m.created_at),
         ...(m.status === "failed" || m.error_type
           ? { error: m.error_message ?? "Query failed.", errorType: m.error_type, errorDetail: m.error_message }
-          : { result: { message_id: m.id, status: m.status, summary: m.result_summary, sql: m.sql_generated, chart_config: m.chart_config, kpi_cards: m.kpi_cards ?? [], columns: m.result_columns ?? [], rows: m.result_preview?.rows ?? [], assumptions: m.assumptions ?? [], error_type: m.error_type, message: m.error_message, suggestions: [], execution_ms: m.execution_ms, total_ms: m.total_response_ms ?? null } }),
+          : { result: { message_id: m.id, status: m.status, summary: m.result_summary, sql: m.sql_generated, chart_config: m.chart_config, kpi_cards: m.kpi_cards ?? [], columns: m.result_columns ?? [], rows: m.result_preview?.rows ?? [], assumptions: m.assumptions ?? [], error_type: m.error_type, message: m.error_message, suggestions: [], execution_ms: m.execution_ms, total_ms: m.total_response_ms ?? null, confidence_score: m.confidence_score ?? null, confidence_level: m.confidence_level ?? null, confidence_factors: m.confidence_factors ?? [], confidence_caveats: m.confidence_caveats ?? [] } }),
       }
       return [userMsg, assistantMsg]
     })

@@ -85,12 +85,16 @@ function ConnectionsTab() {
   const router = useRouter()
   const [editTarget, setEditTarget] = useState<Connection | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<Connection | null>(null)
+  const [typeFilter, setTypeFilter] = useState<"all" | "postgres" | "mysql" | "mssql">("all")
 
   const { data: allConnections, isLoading } = useQuery<Connection[]>({
     queryKey: ["connections"],
     queryFn: () => connectionsApi.list() as Promise<Connection[]>,
     staleTime: 30_000,
   })
+
+  const filteredConnections = typeFilter === "all" ? allConnections : allConnections?.filter((c) => c.db_type === typeFilter)
+  const typeFilterLabels: Record<string, string> = { all: "All", postgres: "PostgreSQL", mysql: "MySQL", mssql: "SQL Server" }
 
   return (
     <>
@@ -107,6 +111,25 @@ function ConnectionsTab() {
         </button>
       </div>
 
+      {allConnections && allConnections.length > 0 && (
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {(["all", "postgres", "mysql", "mssql"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => setTypeFilter(f)}
+              className={cn(
+                "px-2.5 py-1 rounded-full text-xs font-medium transition-colors",
+                typeFilter === f
+                  ? "bg-brand text-white"
+                  : "bg-[var(--surface-2)] text-[var(--text-muted)] hover:text-[var(--text-dim)] border border-[var(--border)]"
+              )}
+            >
+              {typeFilterLabels[f]}
+            </button>
+          ))}
+        </div>
+      )}
+
       {isLoading && (
         <div className="flex flex-col gap-4">
           {[0, 1].map((i) => <SkeletonCard key={i} className="h-48" />)}
@@ -117,16 +140,20 @@ function ConnectionsTab() {
         <EmptyState
           icon={Database}
           heading="Add your first database connection"
-          body="Connect a PostgreSQL database and Querify will introspect your schema and generate insights automatically."
+          body="Connect PostgreSQL, MySQL, or SQL Server and Querify will introspect your schema and generate insights automatically."
           ctaLabel="Connect a database"
           onCta={() => router.push("/settings/connections/new")}
           className="py-12"
         />
       )}
 
-      {!isLoading && allConnections && allConnections.length > 0 && (
+      {!isLoading && allConnections && allConnections.length > 0 && filteredConnections?.length === 0 && (
+        <p className="text-sm text-[var(--text-muted)] text-center py-8">No connections match the selected filter.</p>
+      )}
+
+      {!isLoading && filteredConnections && filteredConnections.length > 0 && (
         <div className="flex flex-col gap-4">
-          {allConnections.map((c) => (
+          {filteredConnections.map((c) => (
             <ConnectionDetailCard
               key={c.id}
               connection={c}

@@ -116,6 +116,10 @@ export interface ChatMessage {
   total_response_ms: number | null
   feedback_score: number | null
   created_at: string
+  confidence_score?: number | null
+  confidence_level?: "high" | "medium" | "low" | null
+  confidence_factors?: string[]
+  confidence_caveats?: string[]
 }
 
 export interface AnalyticalSubQuery {
@@ -147,6 +151,10 @@ export interface QueryResult {
   response_type?: "standard" | "analytical" | "correction_acknowledged"
   analytical_narrative?: string | null
   analytical_sub_queries?: AnalyticalSubQuery[]
+  confidence_score?: number | null
+  confidence_level?: "high" | "medium" | "low" | null
+  confidence_factors?: string[]
+  confidence_caveats?: string[]
 }
 
 export type InsightType = "revenue_trend" | "new_users" | "churn_signal" | "top_performer" | "anomaly" | "recurring_question"

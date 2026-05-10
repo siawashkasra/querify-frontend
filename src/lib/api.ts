@@ -59,12 +59,14 @@ export const connections = {
   get: (id: string) => get<Connection>(`/api/v1/connections/${id}`),
   create: (data: {
     name: string
+    db_type: string
     host: string
     port: number
     database: string
     username: string
     password: string
     ssl_mode?: string
+    extra_params?: Record<string, unknown>
   }) => post<Connection>("/api/v1/connections", data),
   update: (id: string, data: {
     name?: string
@@ -82,6 +84,7 @@ export const connections = {
     username: string
     password: string
     ssl_mode?: string
+    db_type?: string
   }) => post<ConnectionTestResult>("/api/v1/connections/test", data),
   testExisting: (id: string) => post<ConnectionTestResult>(`/api/v1/connections/${id}/test`),
   delete: (id: string) => del<void>(`/api/v1/connections/${id}`),

@@ -1,0 +1,134 @@
+---
+title: "SQL Server setup guide"
+description: "Create a read-only SQL Server login, configure Querify access, and install the ODBC driver for SQL Server 2016+ and Azure SQL Database."
+updated: "2026-05-10"
+readTime: 8
+order: 3
+---
+
+## Prerequisites
+
+- SQL Server 2016 or later, or Azure SQL Database
+- A login with `sysadmin` or equivalent rights to create users and grant permissions
+- SQL Server Authentication enabled (not Windows-only mode)
+
+## Enable SQL Server Authentication
+
+If your server uses Windows Authentication only, you must enable mixed-mode authentication:
+
+1. In SSMS, right-click the server → **Properties** → **Security**
+2. Under **Server authentication**, select **SQL Server and Windows Authentication mode**
+3. Restart the SQL Server service
+
+## Create a read-only login
+
+Run these commands in SSMS or any SQL query tool connected as an admin:
+
+```sql
+CREATE LOGIN querify WITH PASSWORD = 'your_strong_password';
+```
+
+Replace `your_strong_password` with a strong random password (16+ characters recommended).
+
+## Create a database user
+
+For each database you want Querify to access:
+
+```sql
+USE your_database;
+GO
+CREATE USER querify FOR LOGIN querify;
+GO
+```
+
+## Grant SELECT access
+
+```sql
+USE your_database;
+GO
+GRANT SELECT ON SCHEMA::dbo TO querify;
+GO
+```
+
+If your data spans multiple schemas, repeat the `GRANT SELECT ON SCHEMA` command for each schema:
+
+```sql
+GRANT SELECT ON SCHEMA::sales TO querify;
+GRANT SELECT ON SCHEMA::reporting TO querify;
+GO
+```
+
+## Verify the permissions
+
+```sql
+USE your_database;
+GO
+SELECT * FROM fn_my_permissions(NULL, 'DATABASE')
+WHERE permission_name = 'SELECT';
+GO
+```
+
+## Azure SQL Database notes
+
+For Azure SQL, the hostname format is:
+
+```
+your-server.database.windows.net
+```
+
+Firewall: add the Querify egress IP to your Azure SQL firewall rules under **Settings → Networking → Firewall rules**.
+
+Connection uses **port 1433** by default with SSL always enforced — no additional SSL configuration needed.
+
+## Named instances
+
+If your SQL Server uses a named instance (e.g. `SQLEXPRESS`), enter the instance name in the **Instance name** field in the Querify connection form. Leave it blank for the default instance.
+
+## ODBC Driver requirement
+
+Querify's backend connects to SQL Server using **ODBC Driver 18 for SQL Server**. This is pre-installed on Querify's hosted service.
+
+If you are self-hosting Querify, install the driver on your server:
+
+**Ubuntu / Debian:**
+
+```bash
+curl https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add -
+curl https://packages.microsoft.com/config/ubuntu/22.04/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+sudo apt-get update
+ACCEPT_EULA=Y sudo apt-get install -y msodbcsql18 unixodbc-dev
+```
+
+**macOS (Homebrew):**
+
+```bash
+brew tap microsoft/mssql-release https://github.com/microsoft/homebrew-mssql-release
+brew install msodbcsql18
+```
+
+**Docker / Railway:**
+
+Add to your `Dockerfile` before the app install step:
+
+```dockerfile
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+  && curl https://packages.microsoft.com/config/debian/12/prod.list > /etc/apt/sources.list.d/mssql-release.list \
+  && apt-get update \
+  && ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev
+```
+
+## Use in Querify
+
+In the Querify connection form:
+
+- **Host**: your server hostname (e.g. `your-server.database.windows.net`)
+- **Port**: `1433`
+- **Database**: your database name
+- **Username**: `querify`
+- **Password**: the password you set in `CREATE LOGIN`
+- **Instance name**: leave blank for default, or enter `SQLEXPRESS` for named instances
+- **SSL mode**: Required (always enforced for SQL Server)
+
+Run **Test connection** before saving.
+
+For help, email [support@querify.ai](mailto:support@querify.ai).
