@@ -34,15 +34,17 @@ export default function ChatPage({ params }: ChatPageProps) {
     staleTime: 60_000,
   })
 
+  const hasLiveMessages = (threads[sessionId] ?? []).some((m) => m.role === "assistant" && !m.loading && m.result?.rows && (m.result.rows as unknown[]).length > 0)
+
   const { data: apiMessages } = useQuery<ChatMessage[]>({
     queryKey: ["session-messages", sessionId],
     queryFn: () => queryApi.history({ session_id: sessionId, limit: 100 }) as Promise<ChatMessage[]>,
-    staleTime: Infinity,
-    enabled: !threads[sessionId]?.length,
+    staleTime: 60_000,
+    enabled: !hasLiveMessages,
   })
 
   useEffect(() => {
-    if (!apiMessages?.length || threads[sessionId]?.length) return
+    if (!apiMessages?.length || hasLiveMessages) return
     const hydrated = apiMessages.flatMap((m): ThreadMessage[] => {
       const userMsg: ThreadMessage = { id: `${m.id}-user`, role: "user", prompt: m.prompt, createdAt: new Date(m.created_at) }
       const assistantMsg: ThreadMessage = {
@@ -51,12 +53,12 @@ export default function ChatPage({ params }: ChatPageProps) {
         createdAt: new Date(m.created_at),
         ...(m.status === "failed" || m.error_type
           ? { error: m.error_message ?? "Query failed.", errorType: m.error_type, errorDetail: m.error_message }
-          : { result: { message_id: m.id, status: m.status, summary: m.result_summary, sql: m.sql_generated, chart_config: m.chart_config, kpi_cards: m.kpi_cards ?? [], columns: (m.result_columns as string[] | null) ?? [], rows: [], assumptions: m.assumptions ?? [], error_type: m.error_type, message: m.error_message, suggestions: [], execution_ms: m.execution_ms, total_ms: m.total_response_ms ?? null } }),
+          : { result: { message_id: m.id, status: m.status, summary: m.result_summary, sql: m.sql_generated, chart_config: m.chart_config, kpi_cards: m.kpi_cards ?? [], columns: m.result_columns ?? [], rows: m.result_preview?.rows ?? [], assumptions: m.assumptions ?? [], error_type: m.error_type, message: m.error_message, suggestions: [], execution_ms: m.execution_ms, total_ms: m.total_response_ms ?? null } }),
       }
       return [userMsg, assistantMsg]
     })
     loadThread(sessionId, hydrated)
-  }, [apiMessages, sessionId, threads, loadThread])
+  }, [apiMessages, sessionId, hasLiveMessages, loadThread])
 
   useEffect(() => {
     setActiveSession(sessionId)

@@ -106,7 +106,7 @@ export interface ChatMessage {
   sql_generated: string | null
   result_summary: string | null
   result_columns: string[] | null
-  result_preview: unknown[][] | null
+  result_preview: { rows: unknown[][] } | null
   chart_config: ChartConfig | null
   kpi_cards: KPICard[] | null
   assumptions: string[] | null
