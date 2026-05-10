@@ -3,14 +3,23 @@
 import { useState, useCallback } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { format } from "date-fns"
-import { Database, CheckCircle, XCircle, RefreshCw, Pencil, Trash2 } from "lucide-react"
+import { Database, CheckCircle, XCircle, RefreshCw, Pencil, Trash2, Activity } from "lucide-react"
 import { toast } from "react-hot-toast"
 import { connections as connectionsApi } from "@/lib/api"
 import { cn } from "@/lib/cn"
 import Badge from "@/components/ui/Badge"
 import Spinner from "@/components/ui/Spinner"
 import { DbTypeBadge } from "@/components/connections/DbTypeBadge"
+import ReliabilityTab from "@/components/connections/ReliabilityTab"
+import AlertsTab from "@/components/connections/AlertsTab"
 import type { Connection, ConnectionStatus } from "@/types"
+
+const STALENESS_CFG: Record<string, { dot: string; label: string }> = {
+  fresh: { dot: "bg-success", label: "Context is current" },
+  aging: { dot: "bg-amber-400", label: "Context is aging" },
+  stale: { dot: "bg-amber-500", label: "Context may be outdated — consider refreshing" },
+  very_stale: { dot: "bg-danger", label: "Context is outdated — refresh recommended" },
+}
 
 const STATUS_CFG: Record<ConnectionStatus, { dot: string; badge: "active" | "degraded" | "inactive" | "pending" }> = {
   active: { dot: "bg-success", badge: "active" },
@@ -34,11 +43,20 @@ interface ConnectionDetailCardProps {
   onDelete: () => void
 }
 
+type CardTab = "overview" | "reliability" | "alerts"
+
+const CARD_TABS: { id: CardTab; label: string }[] = [
+  { id: "overview", label: "Overview" },
+  { id: "reliability", label: "Reliability" },
+  { id: "alerts", label: "Alerts" },
+]
+
 export const ConnectionDetailCard = ({ connection, onEdit, onDelete }: ConnectionDetailCardProps) => {
   const qc = useQueryClient()
   const [testing, setTesting] = useState(false)
   const [introspecting, setIntrospecting] = useState(false)
   const [inferring, setInferring] = useState(false)
+  const [activeTab, setActiveTab] = useState<CardTab>("overview")
   const cfg = STATUS_CFG[connection.status] ?? STATUS_CFG.untested
 
   const metricsCount = (() => {
@@ -121,7 +139,25 @@ export const ConnectionDetailCard = ({ connection, onEdit, onDelete }: Connectio
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 px-5 py-4">
+      <div className="flex gap-0 border-b border-[var(--border)] px-5">
+        {CARD_TABS.map(({ id, label }) => (
+          <button
+            key={id}
+            onClick={() => setActiveTab(id)}
+            className={cn(
+              "flex items-center gap-1.5 px-3 py-2.5 text-xs font-medium border-b-2 -mb-px transition-colors",
+              activeTab === id ? "border-brand text-brand" : "border-transparent text-[var(--text-muted)] hover:text-[var(--text-dim)]"
+            )}
+          >
+            {id === "reliability" && <Activity size={11} />}
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "overview" && (
+        <>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 px-5 py-4">
         <Field label="Host" value={connection.host} />
         <Field label="Port" value={connection.port} />
         <Field label="Database" value={connection.database_name} />
@@ -131,6 +167,24 @@ export const ConnectionDetailCard = ({ connection, onEdit, onDelete }: Connectio
         <Field label="Tables" value={connection.table_count ?? "—"} />
         <Field label="Context version" value={connection.context_version ? `v${connection.context_version}` : "—"} />
         <Field label="Metrics detected" value={metricsCount > 0 ? metricsCount : "—"} />
+        {connection.staleness_level && (() => {
+          const cfg = STALENESS_CFG[connection.staleness_level] ?? STALENESS_CFG.fresh
+          const daysOld = connection.last_introspected_at
+            ? Math.floor((Date.now() - new Date(connection.last_introspected_at).getTime()) / 86_400_000)
+            : null
+          const label = connection.staleness_level === "aging" && daysOld !== null
+            ? `Context is ${daysOld} day${daysOld === 1 ? "" : "s"} old`
+            : cfg.label
+          return (
+            <div className="flex flex-col gap-0.5 col-span-2 sm:col-span-3">
+              <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Context health</span>
+              <span className="flex items-center gap-2 text-sm text-[var(--text)]">
+                <span className={cn("h-2 w-2 rounded-full shrink-0", cfg.dot)} />
+                {label}
+              </span>
+            </div>
+          )
+        })()}
         {connection.last_introspected_at && (
           <Field label="Last introspected" value={format(new Date(connection.last_introspected_at), "MMM d, yyyy")} />
         )}
@@ -180,6 +234,20 @@ export const ConnectionDetailCard = ({ connection, onEdit, onDelete }: Connectio
           Delete
         </button>
       </div>
+        </>
+      )}
+
+      {activeTab === "reliability" && (
+        <div className="px-5">
+          <ReliabilityTab connection={connection} />
+        </div>
+      )}
+
+      {activeTab === "alerts" && (
+        <div className="px-5 pb-5">
+          <AlertsTab connection={connection} />
+        </div>
+      )}
     </div>
   )
 }

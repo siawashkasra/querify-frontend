@@ -15,6 +15,8 @@ import type {
   PipelineStatus,
   SuggestedQuestion,
   InsightGenerationStatus,
+  ConnectionAlert,
+  AlertPreferences,
 } from "@/types"
 
 const http = axios.create({
@@ -54,6 +56,9 @@ const del = <T>(url: string) =>
 const put = <T>(url: string, data?: unknown) =>
   (http as unknown as { put: (url: string, data: unknown) => Promise<T> }).put(url, data)
 
+const patch = <T>(url: string, data?: unknown) =>
+  (http as unknown as { patch: (url: string, data: unknown) => Promise<T> }).patch(url, data)
+
 export const connections = {
   list: () => get<Connection[]>("/api/v1/connections"),
   get: (id: string) => get<Connection>(`/api/v1/connections/${id}`),
@@ -90,6 +95,8 @@ export const connections = {
   delete: (id: string) => del<void>(`/api/v1/connections/${id}`),
   introspect: (id: string) => post<SchemaSnapshot>(`/api/v1/connections/${id}/schema/introspect`),
   getSchema: (id: string) => get<SchemaSnapshot>(`/api/v1/connections/${id}/schema`),
+  getSchemaDiff: (id: string) => get<import("@/types").SchemaDiff | null>(`/api/v1/connections/${id}/schema/diff`),
+  acknowledgeSchemaChange: (id: string, refreshContext: boolean) => post<{ acknowledged: boolean; refresh_context_queued: boolean }>(`/api/v1/connections/${id}/schema/acknowledge`, { refresh_context: refreshContext }),
   inferContext: (id: string) => post<Record<string, unknown>>(`/api/v1/connections/${id}/context/infer`),
   getContext: (id: string) => get<Record<string, unknown>>(`/api/v1/connections/${id}/context`),
   pipelineStatus: (id: string) => get<PipelineStatus>(`/api/v1/connections/${id}/pipeline-status`),
@@ -97,6 +104,29 @@ export const connections = {
   suggestedQuestions: (id: string) => get<SuggestedQuestion[]>(`/api/v1/connections/${id}/suggested-questions`),
   generateInsights: (id: string) => post<{ queued: boolean; estimated_completion_seconds: number }>(`/api/v1/connections/${id}/insights/generate`),
   insightGenerationStatus: (id: string) => get<InsightGenerationStatus>(`/api/v1/connections/${id}/insights/status`),
+  healthCheck: (id: string) => post<import("@/types").HealthCheckResult>(`/api/v1/connections/${id}/health/check`),
+  healthHistory: (id: string) => get<import("@/types").HealthLogEntry[]>(`/api/v1/connections/${id}/health/history`),
+  healthSummary: (id: string) => get<import("@/types").HealthSummary>(`/api/v1/connections/${id}/health/summary`),
+}
+
+export const auditLog = {
+  list: (params: { connection_id?: string; event_type?: string; from_date?: string; to_date?: string; limit?: number; offset?: number }) =>
+    get<import("@/types").AuditEvent[]>("/api/v1/audit-log", params as Record<string, unknown>),
+  exportUrl: (params: { connection_id?: string; event_type?: string; from_date?: string; to_date?: string }) => {
+    const base = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+    const q = new URLSearchParams()
+    if (params.connection_id) q.set("connection_id", params.connection_id)
+    if (params.event_type) q.set("event_type", params.event_type)
+    if (params.from_date) q.set("from_date", params.from_date)
+    if (params.to_date) q.set("to_date", params.to_date)
+    return `${base}/api/v1/audit-log/export?${q.toString()}`
+  },
+}
+
+export const confidenceAnalytics = {
+  trend: (id: string, days = 30) => get<import("@/types").ConfidenceTrend>(`/api/v1/connections/${id}/confidence/trend`, { days }),
+  byType: (id: string, days = 30) => get<import("@/types").QuestionTypeStats[]>(`/api/v1/connections/${id}/confidence/by-type`, { days }),
+  lowQueries: (id: string, limit = 10) => get<import("@/types").LowConfidenceQuery[]>(`/api/v1/connections/${id}/confidence/low-queries`, { limit }),
 }
 
 export const query = {
@@ -144,6 +174,14 @@ export const exports = {
   get: (id: string) => get<ExportJob>(`/api/v1/exports/${id}`),
   create: (data: { message_id: string; format: "csv" | "pdf" | "xlsx" }) =>
     post<ExportJob>("/api/v1/exports", data),
+}
+
+export const alerts = {
+  list: (connection_id: string) => get<ConnectionAlert[]>(`/api/v1/connections/${connection_id}/alerts`),
+  unread: (connection_id: string) => get<ConnectionAlert[]>(`/api/v1/connections/${connection_id}/alerts/unread`),
+  acknowledge: (alert_id: string) => post<{ acknowledged: boolean }>(`/api/v1/alerts/${alert_id}/acknowledge`, {}),
+  markAllRead: (connection_id: string) => post<{ marked: number }>(`/api/v1/connections/${connection_id}/alerts/mark-all-read`, {}),
+  updatePreferences: (connection_id: string, prefs: AlertPreferences) => patch<{ updated: boolean }>(`/api/v1/connections/${connection_id}/alert-preferences`, prefs),
 }
 
 export default http

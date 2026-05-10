@@ -59,7 +59,11 @@ function NewChatPage() {
       if (resolvedSession !== sid) migrateThread(sid, resolvedSession)
       const signal = getSignal()
       const result = await queryApi.execute({ prompt, session_id: resolvedSession, connection_id: activeConnectionId }, signal) as QueryResult
-      resolveMessage(resolvedSession, loadingId, result)
+      if (result.status === "failed" || result.status === "timeout") {
+        rejectMessage(resolvedSession, loadingId, result.message ?? "Query failed.", result.error_type ?? null, result.message ?? null)
+      } else {
+        resolveMessage(resolvedSession, loadingId, result)
+      }
     } catch (err: unknown) {
       const isAbort = err instanceof Error && err.name === "AbortError"
       const apiErr = err as { error_type?: string; message?: string } | null

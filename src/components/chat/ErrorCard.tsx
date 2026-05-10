@@ -31,6 +31,7 @@ export const ErrorCard = ({ errorType, errorDetail, onRetry, onRephrase }: Error
   const config = ((): ErrorCardConfig => {
     switch (errorType) {
       case "GENERATION_FAILED":
+      case "SQL_GENERATION_FAILED":
         return {
           icon: AlertTriangle,
           title: "I could not generate a valid query for that question.",
@@ -47,6 +48,9 @@ export const ErrorCard = ({ errorType, errorDetail, onRetry, onRephrase }: Error
           body: "Querify only runs SELECT queries — it cannot modify your data.",
         }
       case "EXECUTION_FAILED":
+      case "EXEC_SYNTAX":
+      case "EXEC_PERMISSION":
+      case "EXEC_UNKNOWN":
         return {
           icon: AlertTriangle,
           title: "The query ran but your database returned an error.",
@@ -55,19 +59,24 @@ export const ErrorCard = ({ errorType, errorDetail, onRetry, onRephrase }: Error
           actions: [{ label: "Connection settings", icon: Settings, onClick: () => router.push("/settings"), variant: "ghost" as const }],
         }
       case "TIMEOUT":
+      case "LLM_TIMEOUT":
+      case "PIPELINE_TIMEOUT":
+      case "EXEC_TIMEOUT":
         return {
           icon: AlertTriangle,
-          title: "This query took too long to complete (>20 seconds).",
+          title: "This query took too long to complete.",
           body: "Try a more specific question or add a date range to limit results.",
           actions: [...(onRetry ? [{ label: "Try again", icon: RefreshCw, onClick: onRetry }] : [])],
         }
       case "UNSAFE":
+      case "UNSAFE_BLOCKED":
         return {
           icon: ShieldOff,
           title: "That question appears to require modifying your data.",
           body: "Querify only reads data — it cannot insert, update, or delete.",
         }
       case "EMPTY_RESULT":
+      case "EXEC_EMPTY":
         return {
           icon: Info,
           title: "Your database returned no results for that question.",
@@ -82,6 +91,7 @@ export const ErrorCard = ({ errorType, errorDetail, onRetry, onRephrase }: Error
           actions: [{ label: "Go to settings", icon: Settings, onClick: () => router.push("/settings") }],
         }
       case "SCHEMA_MISSING":
+      case "NO_SNAPSHOT":
         return {
           icon: AlertTriangle,
           title: "No schema snapshot found for this connection.",

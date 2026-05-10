@@ -4,6 +4,33 @@ export type MessageStatus = "success" | "failed" | "pending" | "empty" | "timeou
 export type MessageRole = "user" | "assistant"
 export type InsightSeverity = "info" | "warning" | "critical"
 export type ExportStatus = "pending" | "processing" | "done" | "failed"
+export type SchemaDiffSeverity = "minor" | "significant" | "breaking"
+
+export interface TypeChange {
+  table: string
+  column: string
+  old_type: string
+  new_type: string
+}
+
+export interface SchemaDiff {
+  has_changes: boolean
+  tables_added: string[]
+  tables_removed: string[]
+  columns_added: Record<string, string[]>
+  columns_removed: Record<string, string[]>
+  type_changes: Record<string, TypeChange[]>
+  severity: SchemaDiffSeverity
+  summary: string
+}
+
+export interface AlertPreferences {
+  connection_degraded?: boolean
+  schema_breaking_change?: boolean
+  confidence_deterioration?: boolean
+  context_very_stale?: boolean
+  email_alerts?: boolean
+}
 
 export interface Connection {
   id: string
@@ -20,6 +47,14 @@ export interface Connection {
   context_version: number | null
   last_tested_at: string | null
   last_introspected_at: string | null
+  last_schema_change_at: string | null
+  schema_change_acknowledged_at: string | null
+  pending_schema_diff: SchemaDiff | null
+  staleness_score: number | null
+  staleness_level: "fresh" | "aging" | "stale" | "very_stale" | null
+  pending_suggestion: string | null
+  staleness_computed_at: string | null
+  alert_preferences: AlertPreferences | null
   created_at: string
   updated_at: string
 }
@@ -245,4 +280,89 @@ export interface ApiError {
   error_type: string
   message: string
   request_id: string | null
+}
+
+export interface AuditEvent {
+  id: string
+  event_type: string
+  connection_id: string | null
+  connection_name: string | null
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
+export interface HealthLogEntry {
+  id: string
+  checked_at: string
+  status: "healthy" | "degraded" | "unreachable"
+  response_ms: number | null
+  error_type: string | null
+  error_message: string | null
+}
+
+export interface HealthIncident {
+  start: string
+  end: string | null
+  status: string
+  duration_minutes: number | null
+}
+
+export interface HealthSummary {
+  uptime_pct: number
+  avg_response_ms: number | null
+  total_checks: number
+  incidents: HealthIncident[]
+}
+
+export interface HealthCheckResult {
+  status: "healthy" | "degraded" | "unreachable"
+  response_ms: number | null
+  error_type: string | null
+  error_message: string | null
+  previous_status: string | null
+}
+
+export interface DailyAverage {
+  date: string
+  avg_score: number
+  query_count: number
+}
+
+export interface ConfidenceTrend {
+  daily_averages: DailyAverage[]
+  overall_avg: number | null
+  trend_direction: "improving" | "stable" | "deteriorating" | null
+  change_from_previous_period: number | null
+}
+
+export interface QuestionTypeStats {
+  question_type: string
+  avg_confidence: number
+  query_count: number
+}
+
+export interface LowConfidenceQuery {
+  id: string
+  prompt: string | null
+  confidence_score: number | null
+  confidence_level: string | null
+  confidence_factors: Record<string, unknown> | null
+  created_at: string
+}
+
+export type AlertPriority = "high" | "medium" | "low"
+
+export interface ConnectionAlert {
+  id: string
+  connection_id: string
+  alert_type: string
+  priority: AlertPriority
+  title: string
+  message: string
+  action_label: string | null
+  action_url: string | null
+  is_read: boolean
+  acknowledged_at: string | null
+  email_sent_at: string | null
+  created_at: string
 }

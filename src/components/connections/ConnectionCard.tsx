@@ -1,12 +1,14 @@
 "use client"
 
 import Link from "next/link"
+import { useQuery } from "@tanstack/react-query"
 import { Database, MessageSquarePlus, Settings as SettingsIcon } from "lucide-react"
 import { cn } from "@/lib/cn"
 import Badge from "@/components/ui/Badge"
 import { DbTypeBadge } from "@/components/connections/DbTypeBadge"
 import { formatDistanceToNow } from "date-fns"
-import type { Connection, ConnectionStatus } from "@/types"
+import { connections as connectionsApi, confidenceAnalytics } from "@/lib/api"
+import type { Connection, ConnectionStatus, HealthSummary, ConfidenceTrend } from "@/types"
 
 interface ConnectionCardProps {
   connection: Connection
@@ -18,6 +20,73 @@ const statusConfig: Record<ConnectionStatus, { dot: string; badge: "active" | "d
   error: { dot: "bg-danger", badge: "degraded" },
   pending: { dot: "bg-brand-mid", badge: "pending" },
   untested: { dot: "bg-[var(--text-muted)]", badge: "inactive" },
+}
+
+function reliabilityDot(color: "green" | "amber" | "red" | "grey") {
+  return { green: "bg-success", amber: "bg-amber-400", red: "bg-danger", grey: "bg-[var(--border)]" }[color]
+}
+
+function healthDotColor(summary: HealthSummary | undefined, status: ConnectionStatus): "green" | "amber" | "red" | "grey" {
+  if (!summary) return status === "active" ? "green" : status === "error" ? "red" : "grey"
+  if (summary.uptime_pct >= 99) return "green"
+  if (summary.uptime_pct >= 90) return "amber"
+  return "red"
+}
+
+function schemaDotColor(conn: Connection): "green" | "amber" | "red" | "grey" {
+  if (!conn.last_introspected_at) return "grey"
+  const days = Math.floor((Date.now() - new Date(conn.last_introspected_at).getTime()) / 86_400_000)
+  if (conn.pending_schema_diff) return "amber"
+  if (days < 7) return "green"
+  if (days <= 30) return "amber"
+  return "red"
+}
+
+function accuracyDotColor(trend: ConfidenceTrend | undefined): "green" | "amber" | "red" | "grey" {
+  if (!trend?.overall_avg) return "grey"
+  if (trend.overall_avg >= 80) return "green"
+  if (trend.overall_avg >= 60) return "amber"
+  return "red"
+}
+
+function ReliabilityDots({ connection }: { connection: Connection }) {
+  const isNew = !connection.last_tested_at
+
+  const { data: summary } = useQuery<HealthSummary>({
+    queryKey: ["health-summary", connection.id],
+    queryFn: () => connectionsApi.healthSummary(connection.id) as Promise<HealthSummary>,
+    staleTime: 5 * 60_000,
+    enabled: !isNew,
+  })
+
+  const { data: trend } = useQuery<ConfidenceTrend>({
+    queryKey: ["confidence-trend", connection.id, 7],
+    queryFn: () => confidenceAnalytics.trend(connection.id, 7) as Promise<ConfidenceTrend>,
+    staleTime: 5 * 60_000,
+    enabled: !isNew,
+  })
+
+  if (isNew) return null
+
+  const hDot = healthDotColor(summary, connection.status)
+  const sDot = schemaDotColor(connection)
+  const aDot = accuracyDotColor(trend)
+
+  const hLabel = hDot === "green" ? "Connection healthy" : hDot === "amber" ? "Connection degraded" : hDot === "red" ? "Connection unreachable" : "Health unknown"
+  const sLabel = sDot === "green" ? "Schema current" : sDot === "amber" ? "Schema may be outdated" : sDot === "red" ? "Schema is stale" : "Schema unknown"
+  const aLabel = trend?.overall_avg ? `Accuracy: ${trend.overall_avg}/100` : "Accuracy data pending"
+
+  return (
+    <div
+      className="flex items-center gap-1.5 mt-0.5"
+      title={`${hLabel} · ${sLabel} · ${aLabel}`}
+    >
+      <span className={cn("h-2 w-2 rounded-full shrink-0", reliabilityDot(hDot))} />
+      <span className={cn("h-2 w-2 rounded-full shrink-0", reliabilityDot(sDot))} />
+      <span className={cn("h-2 w-2 rounded-full shrink-0", reliabilityDot(aDot))} />
+      <span className="text-[10px] text-[var(--text-muted)]">Reliability</span>
+    </div>
+  )
 }
 
 export const ConnectionCard = ({ connection, className }: ConnectionCardProps) => {
@@ -34,6 +103,7 @@ export const ConnectionCard = ({ connection, className }: ConnectionCardProps) =
           <div className="flex flex-col">
             <span className="text-sm font-medium text-[var(--text)] leading-tight">{connection.name}</span>
             <span className="text-xs text-[var(--text-muted)]">{connection.database_name}</span>
+            <ReliabilityDots connection={connection} />
           </div>
         </div>
         <div className="flex items-center gap-2">

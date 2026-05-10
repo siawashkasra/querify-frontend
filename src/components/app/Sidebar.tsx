@@ -2,13 +2,14 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, MessageSquarePlus, Clock, Settings, Database, ChevronLeft, ChevronRight, Sparkles } from "lucide-react"
+import { LayoutDashboard, MessageSquarePlus, Clock, Settings, Database, ChevronLeft, ChevronRight, Sparkles, FileText } from "lucide-react"
 import { clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { useAppStore } from "@/store/appStore"
 import { useQuery } from "@tanstack/react-query"
 import { connections, insights as insightsApi } from "@/lib/api"
 import type { Connection, Insight } from "@/types"
+import { NotificationPanel } from "@/components/app/NotificationPanel"
 
 const cn = (...inputs: Parameters<typeof clsx>) => twMerge(clsx(inputs))
 
@@ -17,6 +18,7 @@ const NAV_ITEMS = [
   { label: "New Chat", icon: MessageSquarePlus, href: "/chat/new" },
   { label: "History", icon: Clock, href: "/history" },
   { label: "Insights", icon: Sparkles, href: "/insights" },
+  { label: "Activity", icon: FileText, href: "/audit-log" },
   { label: "Settings", icon: Settings, href: "/settings" },
 ]
 
@@ -112,6 +114,11 @@ export const Sidebar = () => {
         >
           {sidebarCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
         </button>
+        {!sidebarCollapsed && (
+          <div className="mt-2 flex justify-center">
+            <NotificationPanel />
+          </div>
+        )}
       </div>
     </aside>
   )

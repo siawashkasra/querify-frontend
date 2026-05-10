@@ -3,7 +3,7 @@
 import { use, useEffect, useState, useCallback, useRef } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useAppStore } from "@/store/appStore"
-import { query as queryApi } from "@/lib/api"
+import { connections as connectionsApi, query as queryApi } from "@/lib/api"
 import { useChatStore } from "@/store/chatStore"
 import type { ThreadMessage } from "@/store/chatStore"
 import { useAbortController } from "@/hooks/useAbortController"
@@ -12,7 +12,9 @@ import ChatHeader from "@/components/chat/ChatHeader"
 import MessageThread from "@/components/chat/MessageThread"
 import PromptInput, { type PromptInputHandle } from "@/components/chat/PromptInput"
 import SuggestedPrompts from "@/components/chat/SuggestedPrompts"
-import type { ChatMessage, ChatSession, QueryResult } from "@/types"
+import SchemaChangeBanner from "@/components/chat/SchemaChangeBanner"
+import RefreshSuggestionBanner from "@/components/chat/RefreshSuggestionBanner"
+import type { ChatMessage, ChatSession, Connection, QueryResult } from "@/types"
 
 interface ChatPageProps {
   params: Promise<{ sessionId: string }>
@@ -28,13 +30,20 @@ export default function ChatPage({ params }: ChatPageProps) {
   const [sessionTitle, setSessionTitle] = useState<string | null>(null)
   const inputRef = useRef<PromptInputHandle>(null)
 
+  const { data: activeConn } = useQuery<Connection | null>({
+    queryKey: ["connection", activeConnectionId],
+    queryFn: () => activeConnectionId ? connectionsApi.get(activeConnectionId) as Promise<Connection> : Promise.resolve(null),
+    enabled: !!activeConnectionId,
+    staleTime: 30_000,
+  })
+
   const { data: session } = useQuery<ChatSession>({
     queryKey: ["session", sessionId],
     queryFn: () => queryApi.session(sessionId) as Promise<ChatSession>,
     staleTime: 60_000,
   })
 
-  const hasLiveMessages = (threads[sessionId] ?? []).some((m) => m.role === "assistant" && !m.loading && m.result?.rows && (m.result.rows as unknown[]).length > 0)
+  const hasLiveMessages = (threads[sessionId] ?? []).some((m) => m.loading === true)
 
   const { data: apiMessages } = useQuery<ChatMessage[]>({
     queryKey: ["session-messages", sessionId],
@@ -75,7 +84,12 @@ export default function ChatPage({ params }: ChatPageProps) {
     try {
       const signal = getSignal()
       const result = await queryApi.execute({ prompt, session_id: sessionId, connection_id: activeConnectionId }, signal) as QueryResult
-      resolveMessage(sessionId, loadingId, result)
+      if (result.status === "failed" || result.status === "timeout") {
+        rejectMessage(sessionId, loadingId, result.message ?? "Query failed.", result.error_type ?? null, result.message ?? null)
+      } else {
+        resolveMessage(sessionId, loadingId, result)
+      }
+      qc.invalidateQueries({ queryKey: ["session-messages", sessionId] })
       if (!sessionTitle) {
         const truncated = prompt.slice(0, 40)
         setSessionTitle(truncated)
@@ -97,6 +111,12 @@ export default function ChatPage({ params }: ChatPageProps) {
       <SessionSidebar />
       <div className="flex flex-col flex-1 min-w-0 h-full">
         <ChatHeader sessionTitle={sessionTitle ?? session?.title ?? null} onTitleChange={setSessionTitle} />
+        {activeConn?.pending_schema_diff?.has_changes && (
+          <SchemaChangeBanner connectionId={activeConn.id} diff={activeConn.pending_schema_diff} />
+        )}
+        {activeConn && !activeConn.pending_schema_diff?.has_changes && (
+          <RefreshSuggestionBanner connection={activeConn} />
+        )}
         {messages.length === 0 ? (
           <SuggestedPrompts onSelect={handleSubmit} />
         ) : (

@@ -129,15 +129,14 @@ function HistoryRow({ msg, connectionId, isExpanded, onToggle }: HistoryRowProps
     setTimeout(() => setCopied(false), 2000)
   }, [msg.prompt])
 
-  const preview = msg.result_preview as Record<string, unknown>[][] | null
   const previewRows: Record<string, unknown>[] = useMemo(() => {
-    if (!preview || !msg.result_columns) return []
-    return preview.slice(0, 3).map((row) => {
+    if (!msg.result_preview?.rows || !msg.result_columns) return []
+    return msg.result_preview.rows.slice(0, 3).map((row) => {
       const obj: Record<string, unknown> = {}
-      msg.result_columns!.forEach((col, i) => { obj[col] = Array.isArray(row) ? row[i] : row })
+      msg.result_columns!.forEach((col, i) => { obj[col] = Array.isArray(row) ? row[i] : null })
       return obj
     })
-  }, [preview, msg.result_columns])
+  }, [msg.result_preview, msg.result_columns])
 
   return (
     <div className={cn(
