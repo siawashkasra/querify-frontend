@@ -105,7 +105,15 @@ http.interceptors.request.use((config: InternalAxiosRequestConfig) => {
 // ── Response interceptor: 401 → refresh → retry; format errors ───────────────
 
 http.interceptors.response.use(
-  (response: AxiosResponse) => response.data,
+  (response: AxiosResponse) => {
+    // Emit usage warning event so the chat banner can pick it up without prop drilling
+    const warning = response.headers?.["x-usage-warning"]
+    if (warning === "approaching_limit" && typeof window !== "undefined") {
+      const pct = parseInt(response.headers?.["x-usage-pct"] ?? "0", 10)
+      window.dispatchEvent(new CustomEvent("querify:usage-warning", { detail: { pct } }))
+    }
+    return response.data
+  },
 
   async (error: AxiosError<{ detail: { error_type: string; message: string } | string }>) => {
     const status = error.response?.status
@@ -164,6 +172,25 @@ http.interceptors.response.use(
         return Promise.reject(refreshErr)
       } finally {
         isRefreshing = false
+      }
+    }
+
+    // ── 429: Plan limit exceeded — show specific modal, not generic toast ────
+    if (status === 429) {
+      const limitDetail = error.response?.data?.detail as Record<string, unknown> | undefined
+      const limitError = limitDetail?.error as string | undefined
+      if (limitError === "query_limit_exceeded" || limitError === "connection_limit_exceeded") {
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent(`querify:${limitError}`, { detail: limitDetail })
+          )
+        }
+        return Promise.reject({
+          error_type: limitError,
+          message: (limitDetail?.message as string) || "Plan limit reached",
+          status,
+          detail: limitDetail,
+        })
       }
     }
 
@@ -524,6 +551,89 @@ export const me = {
   tenants: () => get<UserTenant[]>("/api/v1/me/tenants"),
   switchTenant: (tenant_id: string) =>
     post<TokenPair>("/api/v1/me/switch-tenant", { tenant_id }),
+}
+
+// ── Billing API ───────────────────────────────────────────────────────────────
+
+export interface UsageSummary {
+  queries_used: number
+  query_limit: number | null
+  connections_used: number
+  connection_limit: number | null
+  seats_used: number
+  seat_limit: number | null
+  period_end: string | null
+  days_remaining: number
+}
+
+export interface PlanChangePreview {
+  current_plan: string
+  new_plan: string
+  billing_period: string
+  is_upgrade: boolean
+  amount_due_now: number
+  next_invoice_amount: number
+  next_invoice_date: string | null
+  effective_date: string
+}
+
+export interface PlanChangeResponse {
+  redirect: boolean
+  checkout_url: string | null
+  plan_name: string | null
+  status: string | null
+  pending_plan_change: string | null
+  pending_change_date: string | null
+  message: string
+}
+
+export interface SubscriptionInfo {
+  plan_name: string
+  status: string
+  billing_period: string
+  current_period_end: string | null
+  cancelled_at: string | null
+  pending_plan_change: string | null
+  pending_change_date: string | null
+  stripe_customer_id: string | null
+}
+
+export interface CancelResponse {
+  message: string
+  period_end: string | null
+  plan_name: string | null
+}
+
+export interface ReactivateResponse {
+  message: string
+  status: string
+}
+
+export interface InvoiceItem {
+  id: string
+  amount_paid: number
+  status: string | null
+  created: number
+  invoice_pdf: string | null
+}
+
+export const billing = {
+  subscription: () => get<SubscriptionInfo>("/api/v1/billing/subscription"),
+  usage: () => get<UsageSummary>("/api/v1/billing/usage"),
+  planPreview: (new_plan_name: string, billing_period: string) =>
+    get<PlanChangePreview>("/api/v1/billing/plan/preview", { new_plan_name, billing_period }),
+  changePlan: (new_plan_name: string, billing_period: string) =>
+    post<PlanChangeResponse>("/api/v1/billing/plan/change", { new_plan_name, billing_period }),
+  cancel: (reason: string, reason_detail?: string) =>
+    post<CancelResponse>("/api/v1/billing/cancel", { reason, reason_detail: reason_detail ?? "" }),
+  reactivate: () => post<ReactivateResponse>("/api/v1/billing/reactivate", {}),
+  portal: () => post<{ portal_url: string }>("/api/v1/billing/portal", {}),
+  invoices: () => get<InvoiceItem[]>("/api/v1/billing/invoices"),
+  checkoutSuccess: (session_id: string) =>
+    get<{ plan_name: string; status: string; message: string }>(
+      "/api/v1/billing/checkout/success",
+      { session_id }
+    ),
 }
 
 export default http

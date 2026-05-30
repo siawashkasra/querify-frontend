@@ -9,9 +9,11 @@ import * as Dialog from "@radix-ui/react-dialog"
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu"
 import { useAuthStore } from "@/store/authStore"
 import { tenant as tenantApi } from "@/lib/api"
+import { usePlan } from "@/hooks/usePlan"
 import CanDo from "@/components/auth/CanDo"
 import InviteMemberModal from "@/components/team/InviteMemberModal"
 import Button from "@/components/ui/Button"
+import { UpgradePromptInline } from "@/components/billing/UpgradePrompt"
 import { cn } from "@/lib/cn"
 import type { Member, Invitation } from "@/lib/api"
 
@@ -341,6 +343,8 @@ function InvitationsSection() {
 export default function TeamPage() {
   const currentUserId = useAuthStore((s) => s.user?.userId ?? null)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const { isFreePlan, seatLimit } = usePlan()
+  const isTeamLocked = isFreePlan && (seatLimit ?? 1) <= 1
 
   return (
     <div className="h-full overflow-y-auto p-6">
@@ -355,12 +359,27 @@ export default function TeamPage() {
             </p>
           </div>
           <CanDo permission="members:invite">
-            <Button size="sm" onClick={() => setInviteOpen(true)}>
-              <UserPlus size={13} />
-              Invite member
-            </Button>
+            {isTeamLocked ? (
+              <Button size="sm" variant="secondary" disabled>
+                <UserPlus size={13} />
+                Invite member
+              </Button>
+            ) : (
+              <Button size="sm" onClick={() => setInviteOpen(true)}>
+                <UserPlus size={13} />
+                Invite member
+              </Button>
+            )}
           </CanDo>
         </div>
+
+        {isTeamLocked && (
+          <UpgradePromptInline
+            feature="Team access"
+            plan="Starter"
+            price={29}
+          />
+        )}
 
         {/* Members */}
         <section className="flex flex-col gap-3">

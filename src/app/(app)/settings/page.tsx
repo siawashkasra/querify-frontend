@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { Database, Plus, Info, ExternalLink, Wifi, Users, User } from "lucide-react"
+import { Database, Plus, Info, ExternalLink, Wifi, Users, User, CreditCard } from "lucide-react"
 import { connections as connectionsApi } from "@/lib/api"
 import ConnectionDetailCard from "@/components/connections/ConnectionDetailCard"
 import EditConnectionModal from "@/components/connections/EditConnectionModal"
@@ -223,6 +223,15 @@ export default function SettingsPage() {
             <User size={14} />
             Account
           </Link>
+          {can("billing:view") && (
+            <Link
+              href="/settings/billing"
+              className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-[var(--text-muted)] hover:text-[var(--text-dim)] -mb-px transition-colors"
+            >
+              <CreditCard size={14} />
+              Billing
+            </Link>
+          )}
         </div>
 
         {activeTab === "connections" && <ConnectionsTab />}

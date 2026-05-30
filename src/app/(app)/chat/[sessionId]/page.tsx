@@ -7,6 +7,7 @@ import { connections as connectionsApi, query as queryApi } from "@/lib/api"
 import { useChatStore } from "@/store/chatStore"
 import type { ThreadMessage } from "@/store/chatStore"
 import { useAbortController } from "@/hooks/useAbortController"
+import { usePlan } from "@/hooks/usePlan"
 import SessionSidebar from "@/components/chat/SessionSidebar"
 import ChatHeader from "@/components/chat/ChatHeader"
 import MessageThread from "@/components/chat/MessageThread"
@@ -14,6 +15,7 @@ import PromptInput, { type PromptInputHandle } from "@/components/chat/PromptInp
 import SuggestedPrompts from "@/components/chat/SuggestedPrompts"
 import SchemaChangeBanner from "@/components/chat/SchemaChangeBanner"
 import RefreshSuggestionBanner from "@/components/chat/RefreshSuggestionBanner"
+import { UpgradePromptBanner } from "@/components/billing/UpgradePrompt"
 import type { ChatMessage, ChatSession, Connection, QueryResult } from "@/types"
 
 interface ChatPageProps {
@@ -26,8 +28,22 @@ export default function ChatPage({ params }: ChatPageProps) {
   const { activeConnectionId, setActiveSession } = useAppStore()
   const { threads, addUserMessage, addLoadingMessage, resolveMessage, rejectMessage, loadThread } = useChatStore()
   const { getSignal, cancel } = useAbortController()
+  const plan = usePlan()
   const [loading, setLoading] = useState(false)
   const [sessionTitle, setSessionTitle] = useState<string | null>(null)
+  const [usageWarning, setUsageWarning] = useState<{ pct: number } | null>(null)
+  const [warningDismissed, setWarningDismissed] = useState(false)
+
+  useEffect(() => {
+    function onWarning(e: Event) {
+      const detail = (e as CustomEvent<{ pct: number }>).detail
+      if (!warningDismissed && detail.pct >= 80) {
+        setUsageWarning(detail)
+      }
+    }
+    window.addEventListener("querify:usage-warning", onWarning)
+    return () => window.removeEventListener("querify:usage-warning", onWarning)
+  }, [warningDismissed])
   const inputRef = useRef<PromptInputHandle>(null)
 
   const { data: activeConn } = useQuery<Connection | null>({
@@ -111,6 +127,16 @@ export default function ChatPage({ params }: ChatPageProps) {
       <SessionSidebar />
       <div className="flex flex-col flex-1 min-w-0 h-full">
         <ChatHeader sessionTitle={sessionTitle ?? session?.title ?? null} onTitleChange={setSessionTitle} />
+        {usageWarning && !warningDismissed && plan.queryLimit !== null && (
+          <UpgradePromptBanner
+            usagePct={usageWarning.pct}
+            queriesUsed={plan.queriesUsed}
+            queryLimit={plan.queryLimit}
+            nextPlan="Starter"
+            periodEnd={plan.periodEnd}
+            onDismiss={() => setWarningDismissed(true)}
+          />
+        )}
         {activeConn?.pending_schema_diff?.has_changes && (
           <SchemaChangeBanner connectionId={activeConn.id} diff={activeConn.pending_schema_diff} />
         )}

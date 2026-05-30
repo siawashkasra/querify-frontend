@@ -6,8 +6,10 @@ import { Sparkles, CheckCheck } from "lucide-react"
 import toast from "react-hot-toast"
 import { connections as connectionsApi, insights as insightsApi } from "@/lib/api"
 import { useAppStore } from "@/store/appStore"
+import { usePlan } from "@/hooks/usePlan"
 import InsightCard, { InsightCardSkeleton } from "@/components/insights/InsightCard"
 import InsightModal from "@/components/insights/InsightModal"
+import { UpgradePromptInline, LockedFeatureOverlay } from "@/components/billing/UpgradePrompt"
 import { cn } from "@/lib/cn"
 import type { Insight, InsightType } from "@/types"
 
@@ -26,6 +28,7 @@ const PAGE_SIZE = 10
 export default function InsightsPage() {
   const { activeConnectionId } = useAppStore()
   const qc = useQueryClient()
+  const { canInsights } = usePlan()
   const [activeTab, setActiveTab] = useState<FilterTab>("all")
   const [page, setPage] = useState(1)
   const [selectedInsight, setSelectedInsight] = useState<Insight | null>(null)
@@ -116,6 +119,37 @@ export default function InsightsPage() {
   const handleTabChange = (tab: FilterTab) => {
     setActiveTab(tab)
     setPage(1)
+  }
+
+  if (!canInsights) {
+    return (
+      <div className="h-full overflow-y-auto p-6">
+        <div className="max-w-3xl mx-auto flex flex-col gap-6">
+          <div className="flex items-center gap-2">
+            <Sparkles size={18} className="text-brand" />
+            <h1 className="text-lg font-semibold text-[var(--text)]">Insights</h1>
+          </div>
+          <UpgradePromptInline
+            feature="Automatic insights"
+            plan="Starter"
+            price={29}
+          />
+          {/* Preview: blurred skeleton cards */}
+          <div className="relative">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pointer-events-none select-none opacity-40 blur-sm">
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="rounded-xl border border-[var(--border)] bg-white p-4 h-40 flex flex-col gap-2">
+                  <div className="h-3 bg-[var(--surface-3)] rounded w-2/3" />
+                  <div className="h-3 bg-[var(--surface-3)] rounded w-full" />
+                  <div className="h-3 bg-[var(--surface-3)] rounded w-4/5" />
+                </div>
+              ))}
+            </div>
+            <LockedFeatureOverlay feature="Automatic insights" plan="Starter" price={29} />
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

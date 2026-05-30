@@ -11,6 +11,8 @@ import {
 import { toast } from "react-hot-toast"
 import { query as queryApi, connections as connectionsApi, exports as exportsApi } from "@/lib/api"
 import { useAppStore } from "@/store/appStore"
+import { usePlan } from "@/hooks/usePlan"
+import { UpgradePromptInline } from "@/components/billing/UpgradePrompt"
 import { cn } from "@/lib/cn"
 import SQLDisclosure from "@/components/chat/SQLDisclosure"
 import DataTable from "@/components/chat/DataTable"
@@ -68,8 +70,30 @@ async function runExport(messageId: string, format: "csv" | "pdf" | "xlsx") {
   }
 }
 
-function ExportMenu({ messageId }: { messageId: string }) {
+function ExportMenu({ messageId, canExport }: { messageId: string; canExport: boolean }) {
   const [open, setOpen] = useState(false)
+  const [showUpgrade, setShowUpgrade] = useState(false)
+
+  if (!canExport) {
+    return (
+      <div className="relative">
+        <button
+          onClick={(e) => { e.stopPropagation(); setShowUpgrade((o) => !o) }}
+          className="flex items-center gap-1 px-2 py-1 rounded text-xs text-[var(--text-muted)] hover:text-[var(--text-dim)] hover:bg-[var(--surface-3)] border border-transparent hover:border-[var(--border)] transition-colors"
+          title="Export (upgrade required)"
+        >
+          <Download size={12} />
+          Export
+        </button>
+        {showUpgrade && (
+          <div className="absolute right-0 top-8 z-20 w-72" onClick={(e) => e.stopPropagation()}>
+            <UpgradePromptInline feature="Exports" plan="Starter" price={29} />
+          </div>
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="relative">
       <button
@@ -103,9 +127,10 @@ interface HistoryRowProps {
   connectionId: string | null
   isExpanded: boolean
   onToggle: () => void
+  canExport: boolean
 }
 
-function HistoryRow({ msg, connectionId, isExpanded, onToggle }: HistoryRowProps) {
+function HistoryRow({ msg, connectionId, isExpanded, onToggle, canExport }: HistoryRowProps) {
   const router = useRouter()
   const [copied, setCopied] = useState(false)
 
@@ -187,7 +212,7 @@ function HistoryRow({ msg, connectionId, isExpanded, onToggle }: HistoryRowProps
               <RotateCcw size={12} />
               Ask again
             </button>
-            <ExportMenu messageId={msg.id} />
+            <ExportMenu messageId={msg.id} canExport={canExport} />
           </div>
 
           <ChevronDown size={14} className={cn("text-[var(--text-muted)] transition-transform shrink-0", isExpanded && "rotate-180")} />
@@ -243,6 +268,7 @@ type SortOrder = "newest" | "oldest"
 
 export default function HistoryPage() {
   const { activeConnectionId } = useAppStore()
+  const { canExport } = usePlan()
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [sortOrder, setSortOrder] = useState<SortOrder>("newest")
@@ -386,6 +412,7 @@ export default function HistoryPage() {
                 msg={msg}
                 connectionId={activeConnectionId}
                 isExpanded={expandedId === msg.id}
+                canExport={canExport}
                 onToggle={() => setExpandedId((id) => id === msg.id ? null : msg.id)}
               />
             ))}

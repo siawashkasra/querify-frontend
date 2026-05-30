@@ -3,11 +3,12 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { formatDistanceToNow } from "date-fns"
-import { RotateCcw, AlertTriangle, RefreshCw } from "lucide-react"
+import { RotateCcw, AlertTriangle, RefreshCw, Zap, CheckCircle2, ChevronRight } from "lucide-react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useState } from "react"
 import { useAppStore } from "@/store/appStore"
-import { connections, query as queryApi, insights as insightsApi } from "@/lib/api"
+import { connections, query as queryApi, insights as insightsApi, billing as billingApi } from "@/lib/api"
+import type { UsageSummary } from "@/lib/api"
 import { cn } from "@/lib/cn"
 import Badge from "@/components/ui/Badge"
 import Button from "@/components/ui/Button"
@@ -43,6 +44,59 @@ function DegradedBanner({ name, id }: { name: string; id: string }) {
         Check settings
       </Link>
     </div>
+  )
+}
+
+function UsageWidget() {
+  const { data: usage } = useQuery<UsageSummary>({
+    queryKey: ["billing-usage"],
+    queryFn: () => billingApi.usage() as Promise<UsageSummary>,
+    staleTime: 60_000,
+  })
+
+  if (!usage) return null
+
+  const isUnlimited = usage.query_limit === null
+  const pct = isUnlimited ? 0 : (usage.queries_used / (usage.query_limit ?? 1))
+  const isWarning = !isUnlimited && pct >= 0.8
+
+  return (
+    <Link
+      href="/settings/billing"
+      className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-surface-2 px-4 py-3 hover:border-brand/40 hover:bg-surface-3 transition-colors group"
+    >
+      <div className={cn(
+        "w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0",
+        isWarning ? "bg-amber-100" : "bg-green-100"
+      )}>
+        {isUnlimited
+          ? <CheckCircle2 size={14} className="text-green-600" />
+          : <Zap size={14} className={isWarning ? "text-amber-500" : "text-green-600"} />}
+      </div>
+      <div className="flex-1 min-w-0">
+        {isUnlimited ? (
+          <p className="text-sm text-[var(--text-muted)]">Unlimited queries this month</p>
+        ) : (
+          <>
+            <p className="text-sm text-[var(--text-muted)]">
+              <span className={cn("font-semibold", isWarning ? "text-amber-600" : "text-[var(--text)]")}>
+                {usage.queries_used}
+              </span>
+              {" of "}
+              <span className="font-medium text-[var(--text)]">{usage.query_limit}</span>
+              {" queries used this month"}
+            </p>
+            <div className="mt-1.5 h-1.5 rounded-full bg-[var(--surface-3)] overflow-hidden w-full max-w-xs">
+              <div
+                className={cn("h-full rounded-full", pct >= 0.9 ? "bg-red-500" : pct >= 0.7 ? "bg-amber-400" : "bg-green-500")}
+                style={{ width: `${Math.min(pct * 100, 100)}%` }}
+              />
+            </div>
+          </>
+        )}
+      </div>
+      <ChevronRight size={14} className="text-[var(--text-muted)] group-hover:text-brand transition-colors flex-shrink-0" />
+    </Link>
   )
 }
 
@@ -189,6 +243,8 @@ export default function DashboardPage() {
         </div>
         {connsError && <SectionError label="connections" onRetry={refetchConns} />}
       </section>
+
+      <UsageWidget />
 
       {activeConn && (
         <section className="flex flex-col gap-3">
