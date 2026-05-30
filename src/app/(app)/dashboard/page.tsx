@@ -18,6 +18,7 @@ import InsightCard from "@/components/insights/InsightCard"
 import InsightModal from "@/components/insights/InsightModal"
 import { useGreeting } from "@/hooks/useGreeting"
 import { useSuggestedQuestions } from "@/hooks/useSuggestedQuestions"
+import CanDo from "@/components/auth/CanDo"
 import { Database, Plus, MessageSquarePlus } from "lucide-react"
 import type { Connection, ChatMessage, Insight } from "@/types"
 
@@ -118,14 +119,26 @@ export default function DashboardPage() {
   if (!hasConnections) {
     return (
       <div className="h-full overflow-y-auto flex items-center justify-center min-h-[60vh]">
-        <EmptyState
-          icon={Database}
-          heading="Connect your first database"
-          body="Connect your database and Querify will automatically understand what your data means. Ask your first question in under 90 seconds."
-          ctaLabel="Connect a database"
-          onCta={() => router.push("/settings/connections/new")}
-          className="max-w-sm"
-        />
+        <CanDo
+          permission="connections:create"
+          fallback={
+            <EmptyState
+              icon={Database}
+              heading="No database connected yet"
+              body="Ask your workspace admin to add a database connection so you can start querying your data."
+              className="max-w-sm"
+            />
+          }
+        >
+          <EmptyState
+            icon={Database}
+            heading="Connect your first database"
+            body="Connect your database and Querify will automatically understand what your data means. Ask your first question in under 90 seconds."
+            ctaLabel="Connect a database"
+            onCta={() => router.push("/settings/connections/new")}
+            className="max-w-sm"
+          />
+        </CanDo>
       </div>
     )
   }
@@ -164,13 +177,15 @@ export default function DashboardPage() {
               className={cn(c.id === activeConn?.id && "ring-1 ring-brand/40")}
             />
           ))}
-          <Link
-            href="/settings/connections/new"
-            className="rounded-lg border border-dashed border-[var(--border)] bg-surface-2/50 p-4 flex flex-col items-center justify-center gap-2 text-sm text-[var(--text-muted)] hover:border-brand/40 hover:text-brand-mid hover:bg-surface-2 transition-colors min-h-[120px]"
-          >
-            <Plus size={18} />
-            Add connection
-          </Link>
+          <CanDo permission="connections:create">
+            <Link
+              href="/settings/connections/new"
+              className="rounded-lg border border-dashed border-[var(--border)] bg-surface-2/50 p-4 flex flex-col items-center justify-center gap-2 text-sm text-[var(--text-muted)] hover:border-brand/40 hover:text-brand-mid hover:bg-surface-2 transition-colors min-h-[120px]"
+            >
+              <Plus size={18} />
+              Add connection
+            </Link>
+          </CanDo>
         </div>
         {connsError && <SectionError label="connections" onRetry={refetchConns} />}
       </section>

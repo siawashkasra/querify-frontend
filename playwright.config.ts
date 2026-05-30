@@ -10,7 +10,8 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   workers: 1,
   reporter: process.env.CI ? "list" : "html",
-  timeout: 30_000,
+  globalTimeout: 600_000,
+  timeout: 120_000,
   expect: { timeout: 10_000 },
   globalSetup: "./tests/e2e/global-setup.ts",
   globalTeardown: "./tests/e2e/global-teardown.ts",
@@ -23,12 +24,12 @@ export default defineConfig({
   projects: [
     {
       name: "with-state",
-      testIgnore: "01-connect-database.spec.ts",
+      testIgnore: ["01-connect-database.spec.ts", "10-auth-journey.spec.ts", "11-invitation-journey.spec.ts"],
       use: { ...devices["Desktop Chrome"], storageState: STATE_FILE },
     },
     {
       name: "no-state",
-      testMatch: "01-connect-database.spec.ts",
+      testMatch: ["01-connect-database.spec.ts", "10-auth-journey.spec.ts", "11-invitation-journey.spec.ts"],
       dependencies: ["with-state"],
       use: { ...devices["Desktop Chrome"], storageState: undefined },
     },

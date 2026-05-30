@@ -1,14 +1,15 @@
 import { chromium } from "@playwright/test"
-import { STATE_FILE, clearTestConnections, createTestConnection, TEST_CONN } from "./helpers"
+import { STATE_FILE, clearTestConnections, createTestConnection, ensureE2EAuth, TEST_CONN } from "./helpers"
 import * as fs from "fs"
 
 export default async function globalSetup() {
-  await clearTestConnections()
-
   const browser = await chromium.launch()
   const context = await browser.newContext({ baseURL: process.env.BASE_URL || "http://localhost:3000" })
   const page = await context.newPage()
 
+  const tokens = await ensureE2EAuth(page)
+  await clearTestConnections(tokens.access_token)
+  await page.goto("/dashboard")
   await createTestConnection(page)
 
   await context.storageState({ path: STATE_FILE })

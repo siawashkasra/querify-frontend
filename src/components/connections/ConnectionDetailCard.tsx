@@ -9,6 +9,7 @@ import { connections as connectionsApi } from "@/lib/api"
 import { cn } from "@/lib/cn"
 import Badge from "@/components/ui/Badge"
 import Spinner from "@/components/ui/Spinner"
+import CanDo from "@/components/auth/CanDo"
 import { DbTypeBadge } from "@/components/connections/DbTypeBadge"
 import ReliabilityTab from "@/components/connections/ReliabilityTab"
 import AlertsTab from "@/components/connections/AlertsTab"
@@ -219,20 +220,24 @@ export const ConnectionDetailCard = ({ connection, onEdit, onDelete }: Connectio
           Refresh context
         </button>
         <div className="flex-1" />
-        <button
-          onClick={onEdit}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] bg-white text-[var(--text-dim)] hover:border-brand/40 hover:text-brand hover:bg-[var(--brand-light)] transition-colors"
-        >
-          <Pencil size={12} />
-          Edit
-        </button>
-        <button
-          onClick={onDelete}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-danger/30 bg-white text-danger hover:bg-danger/5 transition-colors"
-        >
-          <Trash2 size={12} />
-          Delete
-        </button>
+        <CanDo permission="connections:edit">
+          <button
+            onClick={onEdit}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[var(--border)] bg-white text-[var(--text-dim)] hover:border-brand/40 hover:text-brand hover:bg-[var(--brand-light)] transition-colors"
+          >
+            <Pencil size={12} />
+            Edit
+          </button>
+        </CanDo>
+        <CanDo permission="connections:delete">
+          <button
+            onClick={onDelete}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-danger/30 bg-white text-danger hover:bg-danger/5 transition-colors"
+          >
+            <Trash2 size={12} />
+            Delete
+          </button>
+        </CanDo>
       </div>
         </>
       )}

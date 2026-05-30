@@ -3,15 +3,19 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { Database, Plus, Info, ExternalLink, Wifi } from "lucide-react"
+import { Database, Plus, Info, ExternalLink, Wifi, Users, User } from "lucide-react"
 import { connections as connectionsApi } from "@/lib/api"
 import ConnectionDetailCard from "@/components/connections/ConnectionDetailCard"
 import EditConnectionModal from "@/components/connections/EditConnectionModal"
 import DeleteConfirmModal from "@/components/connections/DeleteConfirmModal"
 import EmptyState from "@/components/ui/EmptyState"
 import { SkeletonCard } from "@/components/ui/Skeleton"
+import CanDo from "@/components/auth/CanDo"
+import { usePermissions } from "@/lib/permissions"
 import { cn } from "@/lib/cn"
 import type { Connection } from "@/types"
+
+import Link from "next/link"
 
 type Tab = "connections" | "about"
 
@@ -102,13 +106,15 @@ function ConnectionsTab() {
         <p className="text-xs text-[var(--text-muted)]">
           {allConnections?.length ?? 0} connection{(allConnections?.length ?? 0) !== 1 ? "s" : ""}
         </p>
-        <button
-          onClick={() => router.push("/settings/connections/new")}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-brand text-white hover:bg-brand-dark transition-colors"
-        >
-          <Plus size={12} />
-          Add connection
-        </button>
+        <CanDo permission="connections:create">
+          <button
+            onClick={() => router.push("/settings/connections/new")}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-brand text-white hover:bg-brand-dark transition-colors"
+          >
+            <Plus size={12} />
+            Add connection
+          </button>
+        </CanDo>
       </div>
 
       {allConnections && allConnections.length > 0 && (
@@ -177,6 +183,7 @@ const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("connections")
+  const { can } = usePermissions()
 
   return (
     <div className="h-full overflow-y-auto p-6">
@@ -199,6 +206,23 @@ export default function SettingsPage() {
               {label}
             </button>
           ))}
+          {/* Linked pages */}
+          {can("members:list") && (
+            <Link
+              href="/settings/team"
+              className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-[var(--text-muted)] hover:text-[var(--text-dim)] -mb-px transition-colors"
+            >
+              <Users size={14} />
+              Team
+            </Link>
+          )}
+          <Link
+            href="/settings/account"
+            className="flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-[var(--text-muted)] hover:text-[var(--text-dim)] -mb-px transition-colors"
+          >
+            <User size={14} />
+            Account
+          </Link>
         </div>
 
         {activeTab === "connections" && <ConnectionsTab />}

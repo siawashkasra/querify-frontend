@@ -5,7 +5,14 @@ export function isValidEmail(v: string) {
 }
 
 export function isValidPassword(v: string) {
-  return v.length >= 8
+  return v.length >= 8 && /[A-Z]/.test(v) && /[0-9]/.test(v)
+}
+
+export function passwordRequirementsMessage(v: string): string {
+  if (v.length < 8) return "Use at least 8 characters"
+  if (!/[A-Z]/.test(v)) return "Add at least one uppercase letter"
+  if (!/[0-9]/.test(v)) return "Add at least one number"
+  return ""
 }
 
 export function nonEmpty(v: string) {
