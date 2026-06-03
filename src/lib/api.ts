@@ -444,6 +444,10 @@ export const insights = {
     }),
   chartData: (id: string, period: string) =>
     get<InsightChartDataPayload>(`/api/v1/insights/${id}/chart-data`, { period }),
+  discover: (connection_id: string) =>
+    post<{ discovered: number }>(`/api/v1/insights/discover?connection_id=${connection_id}`),
+  patternFeedback: (id: string, feedback_score: 1 | -1) =>
+    post<Insight>(`/api/v1/insights/${id}/feedback?feedback_score=${feedback_score}`),
   markRead: (id: string) => post<Insight>(`/api/v1/insights/${id}/read`),
   markAllRead: (connection_id?: string) =>
     post<{ updated: number }>(

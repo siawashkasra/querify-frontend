@@ -8,6 +8,7 @@ import { connections as connectionsApi, insights as insightsApi } from "@/lib/ap
 import { useAppStore } from "@/store/appStore"
 import { usePlan } from "@/hooks/usePlan"
 import InsightCard, { InsightCardSkeleton } from "@/components/insights/InsightCard"
+import PremiumInsightCard from "@/components/insights/PremiumInsightCard"
 import InsightModal from "@/components/insights/InsightModal"
 import { UpgradePromptInline, LockedFeatureOverlay } from "@/components/billing/UpgradePrompt"
 import { cn } from "@/lib/cn"
@@ -61,6 +62,18 @@ export default function InsightsPage() {
       )
     },
   })
+  const discoverMutation = useMutation({
+    mutationFn: () => {
+      if (!activeConnectionId) throw new Error("No active connection selected")
+      return insightsApi.discover(activeConnectionId)
+    },
+    onSuccess: async (data) => {
+      const n = (data as { discovered: number })?.discovered ?? 0
+      toast.success(n > 0 ? `Discovered ${n} premium insight${n === 1 ? "" : "s"}` : "No standout patterns right now")
+      await qc.invalidateQueries({ queryKey: ["insights"] })
+    },
+    onError: () => toast.error("Discovery failed"),
+  })
   const triggerInsightsMutation = useMutation({
     mutationFn: () => {
       if (!activeConnectionId) throw new Error("No active connection selected")
@@ -106,7 +119,14 @@ export default function InsightsPage() {
     }
   }, [generationStatus?.state, generationStatus?.generated, generationStatus?.message, activeConnectionId, qc])
 
+  const isDiscovered = (ins: Insight) => !!(ins.data_snapshot as Record<string, unknown> | null)?.pattern
+
+  // 'Worth your attention' — high-priority discovered insights pinned to the top.
+  const pinned = (allInsights ?? []).filter((i) => i.is_urgent && isDiscovered(i)).slice(0, 3)
+  const pinnedIds = new Set(pinned.map((i) => i.id))
+
   const filtered = (allInsights ?? []).filter((ins) => {
+    if (pinnedIds.has(ins.id)) return false
     if (activeTab === "unread") return !ins.is_read
     if (activeTab === "all") return true
     return ins.type === activeTab
@@ -114,6 +134,7 @@ export default function InsightsPage() {
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE)
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const refetchInsights = () => qc.invalidateQueries({ queryKey: ["insights"] })
   const unreadCount = (allInsights ?? []).filter((i) => !i.is_read).length
 
   const handleTabChange = (tab: FilterTab) => {
@@ -166,6 +187,9 @@ export default function InsightsPage() {
             )}
           </div>
           <div className="flex items-center gap-3">
+            <button onClick={() => discoverMutation.mutate()} disabled={!activeConnectionId || discoverMutation.isPending} className="px-3 py-1.5 text-xs rounded-md border border-brand/40 text-brand hover:bg-brand/5 disabled:opacity-50 transition-colors">
+              {discoverMutation.isPending ? "Discovering…" : "Discover patterns"}
+            </button>
             {!generationInProgress && (
               <button onClick={() => triggerInsightsMutation.mutate()} disabled={!activeConnectionId || triggerInsightsMutation.isPending} className="px-3 py-1.5 text-xs rounded-md bg-brand text-white hover:bg-brand-dark disabled:opacity-50 transition-colors">
                 {triggerInsightsMutation.isPending ? "Generating..." : "Generate Insights Now"}
@@ -230,10 +254,12 @@ export default function InsightsPage() {
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
             <Sparkles size={28} className="text-[var(--text-muted)]" />
             <p className="text-sm font-medium text-[var(--text-dim)]">
-              {activeTab === "unread" ? "All caught up!" : "No insights yet"}
+              {activeTab === "unread" ? "All caught up!" : "No standout patterns today"}
             </p>
             <p className="text-xs text-[var(--text-muted)] max-w-xs">
-              Insights are generated automatically. Check back after your database has been connected for a few hours.
+              {activeTab === "unread"
+                ? "You've seen everything."
+                : "Your business is running steady. Run discovery to probe for hidden patterns, or check back as new data arrives."}
             </p>
             {!generationInProgress && (
               <button onClick={() => triggerInsightsMutation.mutate()} disabled={!activeConnectionId || triggerInsightsMutation.isPending} className="mt-2 px-3 py-1.5 text-xs rounded-md bg-brand text-white hover:bg-brand-dark disabled:opacity-50 transition-colors">
@@ -243,10 +269,23 @@ export default function InsightsPage() {
           </div>
         )}
 
+        {!isLoading && pinned.length > 0 && (
+          <section className="flex flex-col gap-3">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-brand">Worth your attention</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+              {pinned.map((ins) => (
+                <PremiumInsightCard key={ins.id} insight={ins} onChanged={refetchInsights} />
+              ))}
+            </div>
+          </section>
+        )}
+
         {!isLoading && paged.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 min-[1200px]:grid-cols-3 gap-4 items-stretch">
+          <div className="grid grid-cols-1 md:grid-cols-2 min-[1200px]:grid-cols-3 gap-4 items-start">
             {paged.map((ins) => (
-              <InsightCard key={ins.id} insight={ins} onOpenModal={setSelectedInsight} />
+              isDiscovered(ins)
+                ? <PremiumInsightCard key={ins.id} insight={ins} onChanged={refetchInsights} />
+                : <InsightCard key={ins.id} insight={ins} onOpenModal={setSelectedInsight} />
             ))}
           </div>
         )}
