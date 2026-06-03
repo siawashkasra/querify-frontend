@@ -404,3 +404,62 @@ export interface ConnectionAlert {
   email_sent_at: string | null
   created_at: string
 }
+
+// ── Auto-generated dashboard (Part 1) ────────────────────────────────────────
+export interface DashboardKpi {
+  id: string
+  name: string
+  format: "currency" | "percent" | "number"
+  good_direction: "up" | "down"
+  why: string
+  value: number | null
+  formatted: string
+  previous: number | null
+  delta_abs: number | null
+  delta_pct: number | null
+  direction: "up" | "down" | "flat"
+  is_good: boolean | null
+  sparkline: { period: string; value: number }[]
+  status: string
+}
+
+export interface DashboardChartTile {
+  id: string
+  title: string
+  intent: string
+  period: string
+  hidden: boolean
+  config: ChartConfig
+  columns: string[]
+  rows: unknown[][]
+  status: string
+}
+
+export interface DashboardChange {
+  id: string
+  label: string
+  text: string
+  direction: "up" | "down"
+  delta: number
+  is_good: boolean | null
+}
+
+export interface DashboardData {
+  connection_id: string
+  business_type: string
+  generated_at: string | null
+  resolved_at: string | null
+  status: "ok" | "partial" | "no_definition"
+  kpis: DashboardKpi[]
+  charts: DashboardChartTile[]
+  changes: DashboardChange[]
+  cached: boolean
+}
+
+export interface DashboardSummary {
+  connection_id: string
+  name: string | null
+  status: string
+  business_type: string | null
+  has_dashboard: boolean
+}

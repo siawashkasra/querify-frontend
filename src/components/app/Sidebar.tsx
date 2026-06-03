@@ -5,7 +5,7 @@ import Link from "next/link"
 import { useRouter, usePathname } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import {
-  LayoutDashboard, Settings, ChevronLeft, ChevronRight, Sparkles, FileText,
+  LayoutDashboard, Settings, ChevronLeft, ChevronRight, Sparkles, FileText, Database,
   ChevronDown, Check, Loader2, Building2, LogOut, Plus, Search, X,
   Trash2, MoreHorizontal,
 } from "lucide-react"
@@ -132,6 +132,7 @@ interface NavItem { label: string; icon: React.ElementType; href: string; permis
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
+  { label: "Connections", icon: Database, href: "/connections" },
   { label: "Insights", icon: Sparkles, href: "/insights" },
   { label: "Activity", icon: FileText, href: "/audit-log", permission: "audit_log:view" },
   { label: "Settings", icon: Settings, href: "/settings", permission: "settings:view" },

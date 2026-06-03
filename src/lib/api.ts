@@ -397,6 +397,20 @@ export const confidenceAnalytics = {
     ),
 }
 
+export const dashboard = {
+  get: (connectionId: string) =>
+    get<import("@/types").DashboardData>(`/api/v1/dashboard/${connectionId}`),
+  refresh: (connectionId: string) =>
+    post<import("@/types").DashboardData>(`/api/v1/dashboard/${connectionId}/refresh`),
+  definition: (connectionId: string) =>
+    get<Record<string, unknown>>(`/api/v1/dashboard/${connectionId}/definition`),
+  regenerate: (connectionId: string) =>
+    post<Record<string, unknown>>(`/api/v1/dashboard/${connectionId}/regenerate`),
+  customise: (connectionId: string, body: { order?: string[]; hidden_charts?: string[]; pinned_chart?: Record<string, unknown> }) =>
+    patch<Record<string, unknown>>(`/api/v1/dashboard/${connectionId}/definition`, body),
+  summaries: () => get<import("@/types").DashboardSummary[]>("/api/v1/dashboard"),
+}
+
 export const query = {
   execute: (
     data: { prompt: string; connection_id: string; session_id?: string },
