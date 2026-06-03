@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { track } from "@/lib/analytics"
 import { auth } from "@/lib/api"
 import { useAuth } from "@/hooks/useAuth"
+import { useAuthStore } from "@/store/authStore"
 import TextField from "./TextField"
 import PasswordField from "./PasswordField"
 import Spinner from "./Spinner"
@@ -86,7 +87,8 @@ export default function LoginForm() {
       // result is TokenPair for single-tenant; ignore TenantSelectionResponse edge case
       const tokens = result as { access_token: string; refresh_token: string; expires_in: number }
       await establishSession(tokens)
-      router.push("/dashboard")
+      const { isSuperAdmin } = useAuthStore.getState()
+      router.push(isSuperAdmin ? "/admin" : "/dashboard")
     } catch (err: unknown) {
       const e = err as { status?: number; message?: string }
       const msg = (e.message || "").toLowerCase()

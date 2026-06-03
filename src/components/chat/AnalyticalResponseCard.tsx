@@ -1,39 +1,42 @@
 "use client"
 
-import { useState } from "react"
-import { ChevronDown, BarChart2 } from "lucide-react"
+import { useMemo, useState } from "react"
+import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/cn"
 import SQLDisclosure from "./SQLDisclosure"
+import KPICards from "./KPICards"
+import QueryChart from "./QueryChart"
+import ResultFooter from "./ResultFooter"
 import type { QueryResult, AnalyticalSubQuery } from "@/types"
 
-interface AnalyticalResponseCardProps {
-  result: QueryResult
-  onSuggestedQuestion?: (question: string) => void
+// ── helpers ─────────────────────────────────────────────────────────────────
+
+function toRowObjects(columns: string[], rows: unknown[]): Record<string, unknown>[] {
+  return rows.map((r) => {
+    if (r && typeof r === "object" && !Array.isArray(r)) return r as Record<string, unknown>
+    const arr = Array.isArray(r) ? r : []
+    return Object.fromEntries(columns.map((col, i) => [col, arr[i] ?? null]))
+  })
 }
 
 function parseSections(markdown: string): Array<{ heading: string; content: string }> {
   const parts = markdown.split(/^## /m).filter(Boolean)
   return parts.map((part) => {
-    const newline = part.indexOf("\n")
-    const heading = newline === -1 ? part.trim() : part.slice(0, newline).trim()
-    const content = newline === -1 ? "" : part.slice(newline + 1).trim()
+    const nl = part.indexOf("\n")
+    const heading = nl === -1 ? part.trim() : part.slice(0, nl).trim()
+    const content = nl === -1 ? "" : part.slice(nl + 1).trim()
     return { heading, content }
   })
 }
 
 function parseSuggestedQuestions(content: string): string[] {
-  return content
-    .split("\n")
-    .map((l) => l.replace(/^[-*]\s*/, "").trim())
-    .filter(Boolean)
+  return content.split("\n").map((l) => l.replace(/^[-*]\s*/, "").trim()).filter(Boolean)
 }
 
+// ── section renderers ────────────────────────────────────────────────────────
+
 function SummarySection({ content }: { content: string }) {
-  return (
-    <div className="mb-4">
-      <p className="text-base font-medium text-[var(--text)] leading-relaxed">{content}</p>
-    </div>
-  )
+  return <p className="text-sm leading-[1.7] text-[var(--text-dim)]">{content}</p>
 }
 
 function KeyMetricsSection({ content }: { content: string }) {
@@ -44,12 +47,16 @@ function KeyMetricsSection({ content }: { content: string }) {
       {lines.map((line, i) => {
         const text = line.replace(/^[-*]\s*/, "").trim()
         const boldMatch = text.match(/^\*\*(.+?)\*\*:?\s*(.*)$/)
-        const label = boldMatch ? boldMatch[1] : null
-        const value = boldMatch ? boldMatch[2] : text
         return (
           <li key={i} className="flex flex-col gap-0.5 bg-[var(--surface-3)] border border-[var(--border)] rounded-lg px-3 py-2.5">
-            {label && <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">{label}</span>}
-            <span className="text-sm font-mono text-[var(--text)]">{value}</span>
+            {boldMatch ? (
+              <>
+                <span className="text-[10px] font-medium uppercase tracking-wider text-[var(--text-muted)]">{boldMatch[1]}</span>
+                <span className="text-sm font-mono text-[var(--text)]">{boldMatch[2]}</span>
+              </>
+            ) : (
+              <span className="text-sm font-mono text-[var(--text)]">{text}</span>
+            )}
           </li>
         )
       })}
@@ -62,10 +69,9 @@ function TrendSection({ content }: { content: string }) {
 }
 
 function WatchSection({ content }: { content: string }) {
-  const lines = content.split("\n").filter(Boolean)
   return (
     <div className="border-l-2 border-amber-400 pl-3 flex flex-col gap-1">
-      {lines.map((line, i) => (
+      {content.split("\n").filter(Boolean).map((line, i) => (
         <p key={i} className="text-sm text-[var(--text-dim)] leading-relaxed">{line.replace(/^[-*]\s*/, "")}</p>
       ))}
     </div>
@@ -73,10 +79,9 @@ function WatchSection({ content }: { content: string }) {
 }
 
 function SuggestedQuestionsSection({ content, onSuggestedQuestion }: { content: string; onSuggestedQuestion?: (q: string) => void }) {
-  const questions = parseSuggestedQuestions(content)
   return (
     <div className="flex flex-wrap gap-2">
-      {questions.map((q, i) => (
+      {parseSuggestedQuestions(content).map((q, i) => (
         <button key={i} onClick={() => onSuggestedQuestion?.(q)} className="text-xs px-3 py-1.5 rounded-full border border-[var(--border)] bg-[var(--surface-3)] text-[var(--text-dim)] hover:border-brand hover:text-brand transition-colors text-left">
           {q}
         </button>
@@ -90,7 +95,7 @@ function SubQueriesDisclosure({ subQueries }: { subQueries: AnalyticalSubQuery[]
   const withSQL = subQueries.filter((sq) => sq.sql)
   if (!withSQL.length) return null
   return (
-    <div className="mt-3 pt-3 border-t border-[var(--border)]">
+    <div className="pt-3 border-t border-[var(--border)]">
       <button onClick={() => setOpen((o) => !o)} className="flex items-center gap-1.5 text-xs text-[var(--text-muted)] hover:text-[var(--text-dim)] transition-colors select-none">
         <ChevronDown size={12} className={cn("transition-transform", open && "rotate-180")} />
         {withSQL.length} sub-{withSQL.length === 1 ? "query" : "queries"} run
@@ -109,17 +114,35 @@ function SubQueriesDisclosure({ subQueries }: { subQueries: AnalyticalSubQuery[]
   )
 }
 
+// ── main component ───────────────────────────────────────────────────────────
+
+interface AnalyticalResponseCardProps {
+  result: QueryResult
+  prompt?: string
+  connectionName?: string
+  onSuggestedQuestion?: (question: string) => void
+}
+
+const KNOWN_SECTIONS = ["Summary", "Key Metrics", "Trend", "What to Watch", "Suggested Questions"]
+
 export const AnalyticalResponseCard = ({ result, onSuggestedQuestion }: AnalyticalResponseCardProps) => {
   const narrative = result.analytical_narrative || ""
   const sections = parseSections(narrative)
   const subQueries = result.analytical_sub_queries || []
+  const hasKPIs = result.kpi_cards && result.kpi_cards.length > 0
+
+  const rowObjects = useMemo(
+    () => result.columns?.length && result.rows?.length ? toRowObjects(result.columns, result.rows) : [],
+    [result.columns, result.rows]
+  )
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2">
-        <BarChart2 size={13} className="text-purple-400 shrink-0" />
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-purple-400">Analysis</span>
-      </div>
+      {hasKPIs && <KPICards cards={result.kpi_cards} />}
+
+      {result.chart_config && rowObjects.length > 0 && (
+        <QueryChart config={result.chart_config} rows={rowObjects} />
+      )}
 
       {sections.map(({ heading, content }) => {
         if (!content) return null
@@ -131,14 +154,24 @@ export const AnalyticalResponseCard = ({ result, onSuggestedQuestion }: Analytic
             {heading === "Trend" && <TrendSection content={content} />}
             {heading === "What to Watch" && <WatchSection content={content} />}
             {heading === "Suggested Questions" && <SuggestedQuestionsSection content={content} onSuggestedQuestion={onSuggestedQuestion} />}
-            {!["Summary", "Key Metrics", "Trend", "What to Watch", "Suggested Questions"].includes(heading) && (
-              <p className="text-sm text-[var(--text-dim)] leading-relaxed">{content}</p>
-            )}
+            {!KNOWN_SECTIONS.includes(heading) && <p className="text-sm text-[var(--text-dim)] leading-relaxed">{content}</p>}
           </div>
         )
       })}
 
       <SubQueriesDisclosure subQueries={subQueries} />
+
+      <ResultFooter
+        messageId={result.message_id}
+        executionMs={result.execution_ms}
+        totalMs={result.total_ms}
+        modelUsed={result.model_used}
+        initialFeedback={result.feedback_score}
+        onFollowUp={onSuggestedQuestion ? () => onSuggestedQuestion("") : undefined}
+        confidenceLevel={result.confidence_level ?? null}
+        confidenceFactors={result.confidence_factors ?? []}
+        confidenceCaveats={result.confidence_caveats ?? []}
+      />
     </div>
   )
 }

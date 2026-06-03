@@ -159,7 +159,11 @@ http.interceptors.response.use(
           const base64 = access_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")
           const payload = JSON.parse(atob(base64))
           if (payload.tenant_id && payload.role !== undefined) {
-            useAuthStore.getState().setTenantContext(payload.tenant_id as string, payload.role as string)
+            useAuthStore.getState().setTenantContext(
+              payload.tenant_id as string,
+              payload.role as string,
+              Boolean(payload.is_super_admin),
+            )
           }
         } catch { /* ignore decode errors */ }
 
@@ -486,6 +490,7 @@ export interface TenantInfo {
   status: string
   timezone: string
   notification_email: string | null
+  data_retention_days: number | null
   created_at: string
   updated_at: string
 }
@@ -526,6 +531,21 @@ export const tenant = {
     del<void>(`/api/v1/tenant/invitations/${id}`),
   resendInvitation: (id: string) =>
     post<Invitation>(`/api/v1/tenant/invitations/${id}/resend`),
+  suspendMember: (userId: string) =>
+    put<{ message: string }>(`/api/v1/tenant/members/${userId}/suspend`, {}),
+  unsuspendMember: (userId: string) =>
+    put<{ message: string }>(`/api/v1/tenant/members/${userId}/unsuspend`, {}),
+  memberStats: () => get<MemberStat[]>("/api/v1/tenant/members/stats"),
+  getConnectionAccess: () => get<ConnectionAccessRule[]>("/api/v1/tenant/connection-access"),
+  setConnectionAccess: (connId: string, rule: "all" | "admins" | "specific", memberIds: string[]) =>
+    put<ConnectionAccessRule>(`/api/v1/tenant/connection-access/${connId}`, { rule, member_ids: memberIds }),
+  delete: () => del<void>("/api/v1/tenant"),
+  updateSettings: (data: {
+    name?: string
+    timezone?: string
+    notification_email?: string | null
+    data_retention_days?: number | null
+  }) => put<TenantInfo>("/api/v1/tenant", data),
 }
 
 // ── Me (user profile) API ─────────────────────────────────────────────────────
@@ -566,6 +586,32 @@ export interface UsageSummary {
   days_remaining: number
 }
 
+export interface ExtendedUsage extends UsageSummary {
+  exports_used: number
+  export_limit: number | null
+  history_days: number
+  period_start: string | null
+}
+
+export interface MemberStat {
+  user_id: string
+  queries_this_month: number
+  last_query_at: string | null
+}
+
+export interface SuccessRateSummary {
+  this_month_pct: number
+  last_month_pct: number
+  total_queries_this_month: number
+  total_queries_last_month: number
+}
+
+export interface ConnectionAccessRule {
+  connection_id: string
+  rule: "all" | "admins" | "specific"
+  member_ids: string[]
+}
+
 export interface PlanChangePreview {
   current_plan: string
   new_plan: string
@@ -585,6 +631,13 @@ export interface PlanChangeResponse {
   pending_plan_change: string | null
   pending_change_date: string | null
   message: string
+}
+
+export interface PaymentMethod {
+  brand: string | null
+  last4: string | null
+  exp_month: number | null
+  exp_year: number | null
 }
 
 export interface SubscriptionInfo {
@@ -620,6 +673,10 @@ export interface InvoiceItem {
 export const billing = {
   subscription: () => get<SubscriptionInfo>("/api/v1/billing/subscription"),
   usage: () => get<UsageSummary>("/api/v1/billing/usage"),
+  paymentMethod: () => get<PaymentMethod>("/api/v1/billing/payment-method"),
+  extendedUsage: () => get<ExtendedUsage>("/api/v1/billing/usage/extended"),
+  memberUsage: () => get<MemberStat[]>("/api/v1/billing/usage/by-member"),
+  successRate: () => get<SuccessRateSummary>("/api/v1/billing/usage/success-rate"),
   planPreview: (new_plan_name: string, billing_period: string) =>
     get<PlanChangePreview>("/api/v1/billing/plan/preview", { new_plan_name, billing_period }),
   changePlan: (new_plan_name: string, billing_period: string) =>

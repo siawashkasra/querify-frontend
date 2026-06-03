@@ -13,20 +13,22 @@ interface AuthState {
   user: AuthUser | null
   tenantId: string | null
   role: string | null
+  isSuperAdmin: boolean
   isAuthenticated: boolean
   // Actions
   setTokens: (access: string, refresh: string) => void
   setUser: (user: AuthUser) => void
-  setTenantContext: (tenantId: string, role: string) => void
+  setTenantContext: (tenantId: string, role: string, isSuperAdmin: boolean) => void
   logout: () => void
 }
 
-const EMPTY: Pick<AuthState, "accessToken" | "refreshToken" | "user" | "tenantId" | "role" | "isAuthenticated"> = {
+const EMPTY: Pick<AuthState, "accessToken" | "refreshToken" | "user" | "tenantId" | "role" | "isSuperAdmin" | "isAuthenticated"> = {
   accessToken: null,
   refreshToken: null,
   user: null,
   tenantId: null,
   role: null,
+  isSuperAdmin: false,
   isAuthenticated: false,
 }
 
@@ -40,7 +42,7 @@ export const useAuthStore = create<AuthState>()(
 
       setUser: (user) => set({ user }),
 
-      setTenantContext: (tenantId, role) => set({ tenantId, role }),
+      setTenantContext: (tenantId, role, isSuperAdmin) => set({ tenantId, role, isSuperAdmin }),
 
       logout: () => set({ ...EMPTY }),
     }),
@@ -51,6 +53,8 @@ export const useAuthStore = create<AuthState>()(
         refreshToken: s.refreshToken,
         tenantId: s.tenantId,
         role: s.role,
+        isSuperAdmin: s.isSuperAdmin,
+        isAuthenticated: s.isAuthenticated,
       }),
     }
   )

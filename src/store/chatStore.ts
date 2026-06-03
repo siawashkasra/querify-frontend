@@ -13,8 +13,18 @@ export interface ThreadMessage {
   createdAt: Date
 }
 
+export interface PanelMessage {
+  id: string
+  role: "user" | "assistant"
+  text: string
+  loading?: boolean
+  error?: string
+  createdAt: Date
+}
+
 interface ChatState {
   threads: Record<string, ThreadMessage[]>
+  panelMessages: Record<string, PanelMessage[]>
   addUserMessage: (sessionId: string, prompt: string) => string
   addLoadingMessage: (sessionId: string) => string
   resolveMessage: (sessionId: string, tempId: string, result: QueryResult) => void
@@ -22,6 +32,10 @@ interface ChatState {
   migrateThread: (from: string, to: string) => void
   clearThread: (sessionId: string) => void
   loadThread: (sessionId: string, messages: ThreadMessage[]) => void
+  addPanelUserMessage: (sessionId: string, text: string) => string
+  addPanelLoadingMessage: (sessionId: string) => string
+  resolvePanelMessage: (sessionId: string, tempId: string, text: string) => void
+  rejectPanelMessage: (sessionId: string, tempId: string, error: string) => void
 }
 
 let _counter = 0
@@ -29,6 +43,7 @@ const tempId = () => `tmp_${Date.now()}_${++_counter}`
 
 export const useChatStore = create<ChatState>((set) => ({
   threads: {},
+  panelMessages: {},
 
   addUserMessage: (sessionId, prompt) => {
     const id = tempId()
@@ -78,7 +93,8 @@ export const useChatStore = create<ChatState>((set) => ({
     set((s) => {
       const msgs = s.threads[from]
       if (!msgs?.length) return s
-      const { [from]: _, ...rest } = s.threads
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { [from]: _removed, ...rest } = s.threads
       return { threads: { ...rest, [to]: [...(rest[to] ?? []), ...msgs] } }
     })
   },
@@ -89,5 +105,49 @@ export const useChatStore = create<ChatState>((set) => ({
 
   loadThread: (sessionId, messages) => {
     set((s) => ({ threads: { ...s.threads, [sessionId]: messages } }))
+  },
+
+  addPanelUserMessage: (sessionId, text) => {
+    const id = tempId()
+    set((s) => ({
+      panelMessages: {
+        ...s.panelMessages,
+        [sessionId]: [...(s.panelMessages[sessionId] ?? []), { id, role: "user", text, createdAt: new Date() }],
+      },
+    }))
+    return id
+  },
+
+  addPanelLoadingMessage: (sessionId) => {
+    const id = tempId()
+    set((s) => ({
+      panelMessages: {
+        ...s.panelMessages,
+        [sessionId]: [...(s.panelMessages[sessionId] ?? []), { id, role: "assistant", text: "", loading: true, createdAt: new Date() }],
+      },
+    }))
+    return id
+  },
+
+  resolvePanelMessage: (sessionId, tempId, text) => {
+    set((s) => ({
+      panelMessages: {
+        ...s.panelMessages,
+        [sessionId]: (s.panelMessages[sessionId] ?? []).map((m) =>
+          m.id === tempId ? { ...m, loading: false, text } : m
+        ),
+      },
+    }))
+  },
+
+  rejectPanelMessage: (sessionId, tempId, error) => {
+    set((s) => ({
+      panelMessages: {
+        ...s.panelMessages,
+        [sessionId]: (s.panelMessages[sessionId] ?? []).map((m) =>
+          m.id === tempId ? { ...m, loading: false, error } : m
+        ),
+      },
+    }))
   },
 }))

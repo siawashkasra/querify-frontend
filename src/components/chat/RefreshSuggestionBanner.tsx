@@ -29,6 +29,8 @@ function dismissFor7Days(connectionId: string): void {
 
 export function RefreshSuggestionBanner({ connection }: RefreshSuggestionBannerProps) {
   const [localDismissed, setLocalDismissed] = useState(() => isDismissed(connection.id))
+  // Stable snapshot of current time — only needed once on mount for age calculation
+  const [now] = useState(Date.now)
   const qc = useQueryClient()
   const level = connection.staleness_level
 
@@ -48,7 +50,7 @@ export function RefreshSuggestionBanner({ connection }: RefreshSuggestionBannerP
   const isVeryStale = level === "very_stale"
 
   const daysOld = connection.last_introspected_at
-    ? Math.floor((Date.now() - new Date(connection.last_introspected_at).getTime()) / 86_400_000)
+    ? Math.floor((now - new Date(connection.last_introspected_at).getTime()) / 86_400_000)
     : null
 
   const handleDismiss = () => {

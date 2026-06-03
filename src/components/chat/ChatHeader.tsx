@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { useQuery } from "@tanstack/react-query"
-import { Check, Pencil } from "lucide-react"
+import { Check, Pencil, PanelRight } from "lucide-react"
 import { connections } from "@/lib/api"
 import { useAppStore } from "@/store/appStore"
 import Badge from "@/components/ui/Badge"
@@ -15,7 +15,7 @@ interface ChatHeaderProps {
 }
 
 export const ChatHeader = ({ sessionTitle, onTitleChange }: ChatHeaderProps) => {
-  const { activeConnectionId } = useAppStore()
+  const { activeConnectionId, showRightPanel, toggleRightPanel } = useAppStore()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState("")
 
@@ -27,18 +27,14 @@ export const ChatHeader = ({ sessionTitle, onTitleChange }: ChatHeaderProps) => 
 
   const activeConn = allConnections?.find((c) => c.id === activeConnectionId) ?? allConnections?.[0] ?? null
 
-  const startEdit = () => {
-    setDraft(sessionTitle ?? "")
-    setEditing(true)
-  }
-
+  const startEdit = () => { setDraft(sessionTitle ?? ""); setEditing(true) }
   const commitEdit = () => {
     if (draft.trim() && onTitleChange) onTitleChange(draft.trim())
     setEditing(false)
   }
 
   return (
-    <div className="flex items-center justify-between h-12 px-4 border-b border-[var(--border)] bg-[var(--surface)] shrink-0">
+    <div className="flex items-center justify-between h-11 px-4 border-b border-[var(--border)] bg-[var(--surface)] shrink-0">
       <div className="flex items-center gap-2 min-w-0">
         {editing ? (
           <div className="flex items-center gap-1.5">
@@ -63,16 +59,31 @@ export const ChatHeader = ({ sessionTitle, onTitleChange }: ChatHeaderProps) => 
         )}
       </div>
 
-      {activeConn && (
-        <div className="flex items-center gap-2 shrink-0">
-          <span className={cn(
-            "h-2 w-2 rounded-full shrink-0",
-            activeConn.status === "active" ? "bg-success" : activeConn.status === "error" ? "bg-danger" : "bg-[var(--text-muted)]"
-          )} />
-          <span className="text-xs text-[var(--text-dim)] hidden sm:block">{activeConn.name}</span>
-          <Badge variant="default">{activeConn.db_type}</Badge>
-        </div>
-      )}
+      <div className="flex items-center gap-2 shrink-0">
+        {activeConn && (
+          <>
+            <span className={cn(
+              "h-2 w-2 rounded-full shrink-0",
+              activeConn.status === "active" ? "bg-success" : activeConn.status === "error" ? "bg-danger" : "bg-[var(--text-muted)]"
+            )} />
+            <span className="text-xs text-[var(--text-dim)] hidden sm:block">{activeConn.name}</span>
+            <Badge variant="default">{activeConn.db_type}</Badge>
+          </>
+        )}
+        <button
+          onClick={toggleRightPanel}
+          className={cn(
+            "hidden md:flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors",
+            showRightPanel
+              ? "bg-[var(--surface-3)] text-[var(--text-dim)]"
+              : "text-[var(--text-muted)] hover:text-[var(--text-dim)] hover:bg-[var(--surface-3)]"
+          )}
+          title={showRightPanel ? "Hide analysis panel" : "Show analysis panel"}
+        >
+          <PanelRight size={13} />
+          <span className="hidden lg:block">Analysis</span>
+        </button>
+      </div>
     </div>
   )
 }

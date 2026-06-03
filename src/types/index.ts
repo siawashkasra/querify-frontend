@@ -118,19 +118,49 @@ export interface KPICard {
   delta_label?: string | null
 }
 
+export type ChartType =
+  | "line" | "area" | "bar" | "bar_horizontal" | "horizontal_bar" | "grouped_bar"
+  | "stacked_bar" | "stacked_100_bar" | "donut" | "pie" | "scatter" | "histogram"
+  | "waterfall" | "sparkline" | "gauge" | "combo"
+
 export interface ChartConfig {
-  type: "bar" | "line" | "area" | "pie" | "bar_horizontal" | "scatter"
-  x_field: string
-  y_field: string
+  type: ChartType
+  x_field?: string | null
+  y_field?: string | null
   title?: string | null
   x_axis?: string | null
   y_axis?: string | null
+  series?: string[]
+  color_scheme?: "brand" | "sequential" | "categorical" | "diverging" | "good_bad" | null
+  sort_order?: "asc" | "desc" | null
+  dashed_from?: number | null
+  emphasis_points?: number[]
+  annotations?: Record<string, unknown>[]
+  role?: "primary" | "supporting"
   data?: Record<string, unknown>[] | null
   format?: string | null
   highlight_last?: boolean
   highlight_first?: boolean
   orientation?: string | null
 }
+
+// ── Analytical composition blocks (Part 4) ──────────────────────────────────
+export interface AnalystKpiCard {
+  label: string
+  value: number | string
+  formatted?: string
+  delta?: number | null
+  aggregation?: string
+}
+
+export type ResponseBlock =
+  | { type: "headline_block"; text: string; summary?: string | null }
+  | { type: "kpi_row"; cards: AnalystKpiCard[] }
+  | { type: "chart_block"; config: ChartConfig }
+  | { type: "insight_block"; insights: string[] }
+  | { type: "table_block"; columns: string[]; rows: unknown[][]; ranked?: boolean; percent_column?: string | null }
+  | { type: "caveat_block"; caveats: string[] }
+  | { type: "followup_block"; questions: string[] }
 
 export interface ChatMessage {
   id: string
@@ -190,6 +220,14 @@ export interface QueryResult {
   confidence_level?: "high" | "medium" | "low" | null
   confidence_factors?: string[]
   confidence_caveats?: string[]
+  // analytical composition layer
+  intent?: string | null
+  analysis_tier?: "light" | "medium" | "full" | null
+  headline?: string | null
+  insights?: string[]
+  follow_ups?: string[]
+  caveats?: string[]
+  blocks?: ResponseBlock[]
 }
 
 export type InsightType = "revenue_trend" | "new_users" | "churn_signal" | "top_performer" | "anomaly" | "recurring_question"

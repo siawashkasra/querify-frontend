@@ -90,6 +90,7 @@ function NewChatPage() {
     queueMicrotask(() => inputRef.current?.setValue(draftParam))
   }, [searchParams])
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     if (autoSubmitDone.current) return
     const promptParam = searchParams.get("prompt")
@@ -99,6 +100,7 @@ function NewChatPage() {
     if (connParam && connParam !== activeConnectionId) setActiveConnection(connParam)
     handleSubmit(promptParam)
   }, [searchParams])
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const handleChipSelect = (prompt: string) => {
     if (!loading) handleSubmit(prompt)

@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Sidebar from "@/components/app/Sidebar"
-import Header from "@/components/app/Header"
 import NetworkBanner from "@/components/app/NetworkBanner"
+import PlanLimitBanner from "@/components/billing/PlanLimitBanner"
 
 export const metadata: Metadata = {
   title: { absolute: "Querify — App" },
@@ -14,8 +14,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <div className="flex h-screen overflow-hidden bg-[var(--bg)]">
       <NetworkBanner />
       <Sidebar />
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden bg-surface">
-        <Header />
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        <PlanLimitBanner />
         <main className="flex-1 overflow-hidden">{children}</main>
       </div>
     </div>

@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { Plus, MessageSquare } from "lucide-react"
+import { Plus } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { query as queryApi } from "@/lib/api"
 import { useAppStore } from "@/store/appStore"

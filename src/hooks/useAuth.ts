@@ -24,7 +24,11 @@ export function useAuth() {
       setTokens(tokens.access_token, tokens.refresh_token)
       const payload = decodeJwtPayload(tokens.access_token)
       if (payload.tenant_id && payload.role !== undefined) {
-        setTenantContext(payload.tenant_id as string, payload.role as string)
+        setTenantContext(
+          payload.tenant_id as string,
+          payload.role as string,
+          Boolean(payload.is_super_admin),
+        )
       }
       // Set httpOnly session cookie via Route Handler so proxy can guard (app) routes
       await fetch("/api/auth/session", { method: "POST" })

@@ -96,6 +96,7 @@ export const DataTable = ({ columns, rows }: DataTableProps) => {
     [visibleCols, types]
   )
 
+  // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({ data: rows, columns: tableColumns, getCoreRowModel: getCoreRowModel() })
 
   return (
