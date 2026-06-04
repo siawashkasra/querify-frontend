@@ -1,9 +1,11 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
+import { redirect } from "next/navigation"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Sparkles, CheckCheck } from "lucide-react"
 import toast from "react-hot-toast"
+import { INSIGHTS_ENABLED } from "@/lib/featureFlags"
 import { connections as connectionsApi, insights as insightsApi } from "@/lib/api"
 import { useAppStore } from "@/store/appStore"
 import { usePlan } from "@/hooks/usePlan"
@@ -27,6 +29,12 @@ const TABS: { id: FilterTab; label: string }[] = [
 const PAGE_SIZE = 10
 
 export default function InsightsPage() {
+  // Insights folded into the dashboard for now. Anyone with a bookmarked /insights
+  // URL is sent home. The page component below stays intact — flip
+  // NEXT_PUBLIC_INSIGHTS_ENABLED=true to restore it. (INSIGHTS_ENABLED is a
+  // build-time constant, so the hook order below is stable.)
+  if (!INSIGHTS_ENABLED) redirect("/dashboard")
+
   const { activeConnectionId } = useAppStore()
   const qc = useQueryClient()
   const { canInsights } = usePlan()
@@ -121,6 +129,19 @@ export default function InsightsPage() {
 
   const isDiscovered = (ins: Insight) => !!(ins.data_snapshot as Record<string, unknown> | null)?.pattern
 
+  // Discovery runs automatically — no button. The first time a connection has no
+  // discovered insights, kick off discovery once in the background.
+  const autoDiscovered = useRef<string | null>(null)
+  useEffect(() => {
+    if (!activeConnectionId || isLoading || !allInsights) return
+    if (autoDiscovered.current === activeConnectionId) return
+    const hasDiscovered = allInsights.some((i) => !!(i.data_snapshot as Record<string, unknown> | null)?.pattern)
+    if (!hasDiscovered && !discoverMutation.isPending) {
+      autoDiscovered.current = activeConnectionId
+      discoverMutation.mutate()
+    }
+  }, [activeConnectionId, isLoading, allInsights, discoverMutation])
+
   // 'Worth your attention' — high-priority discovered insights pinned to the top.
   const pinned = (allInsights ?? []).filter((i) => i.is_urgent && isDiscovered(i)).slice(0, 3)
   const pinnedIds = new Set(pinned.map((i) => i.id))
@@ -175,7 +196,7 @@ export default function InsightsPage() {
 
   return (
     <div className="h-full overflow-y-auto p-6">
-      <div className="max-w-[1400px] mx-auto flex flex-col gap-6">
+      <div className="max-w-[720px] mx-auto flex flex-col gap-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles size={18} className="text-brand" />
@@ -187,9 +208,11 @@ export default function InsightsPage() {
             )}
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={() => discoverMutation.mutate()} disabled={!activeConnectionId || discoverMutation.isPending} className="px-3 py-1.5 text-xs rounded-md border border-brand/40 text-brand hover:bg-brand/5 disabled:opacity-50 transition-colors">
-              {discoverMutation.isPending ? "Discovering…" : "Discover patterns"}
-            </button>
+            {discoverMutation.isPending && (
+              <span className="flex items-center gap-1.5 text-xs text-[var(--text-muted)]">
+                <Sparkles size={12} className="text-brand animate-pulse" /> Analysing your data…
+              </span>
+            )}
             {!generationInProgress && (
               <button onClick={() => triggerInsightsMutation.mutate()} disabled={!activeConnectionId || triggerInsightsMutation.isPending} className="px-3 py-1.5 text-xs rounded-md bg-brand text-white hover:bg-brand-dark disabled:opacity-50 transition-colors">
                 {triggerInsightsMutation.isPending ? "Generating..." : "Generate Insights Now"}
@@ -243,8 +266,8 @@ export default function InsightsPage() {
         </div>
 
         {isLoading && (
-          <div className="grid grid-cols-1 md:grid-cols-2 min-[1200px]:grid-cols-3 gap-4 items-stretch">
-            {[0, 1, 2, 3, 4, 5].map((i) => (
+          <div className="flex flex-col gap-6">
+            {[0, 1, 2].map((i) => (
               <InsightCardSkeleton key={i} />
             ))}
           </div>
@@ -253,13 +276,13 @@ export default function InsightsPage() {
         {!isLoading && paged.length === 0 && (
           <div className="flex flex-col items-center justify-center py-16 gap-3 text-center">
             <Sparkles size={28} className="text-[var(--text-muted)]" />
-            <p className="text-sm font-medium text-[var(--text-dim)]">
-              {activeTab === "unread" ? "All caught up!" : "No standout patterns today"}
+            <p className="text-sm font-medium text-[#374151]">
+              {activeTab === "unread" ? "All caught up" : "No standout patterns in your data today."}
             </p>
-            <p className="text-xs text-[var(--text-muted)] max-w-xs">
+            <p className="text-xs text-[var(--text-muted)] max-w-sm">
               {activeTab === "unread"
                 ? "You've seen everything."
-                : "Your business is running steady. Run discovery to probe for hidden patterns, or check back as new data arrives."}
+                : "We continuously analyse your business and will surface anything important here."}
             </p>
             {!generationInProgress && (
               <button onClick={() => triggerInsightsMutation.mutate()} disabled={!activeConnectionId || triggerInsightsMutation.isPending} className="mt-2 px-3 py-1.5 text-xs rounded-md bg-brand text-white hover:bg-brand-dark disabled:opacity-50 transition-colors">
@@ -271,8 +294,8 @@ export default function InsightsPage() {
 
         {!isLoading && pinned.length > 0 && (
           <section className="flex flex-col gap-3">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-brand">Worth your attention</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-500">Worth your attention</h2>
+            <div className="flex flex-col gap-6">
               {pinned.map((ins) => (
                 <PremiumInsightCard key={ins.id} insight={ins} onChanged={refetchInsights} />
               ))}
@@ -281,7 +304,7 @@ export default function InsightsPage() {
         )}
 
         {!isLoading && paged.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 min-[1200px]:grid-cols-3 gap-4 items-start">
+          <div className="flex flex-col gap-6">
             {paged.map((ins) => (
               isDiscovered(ins)
                 ? <PremiumInsightCard key={ins.id} insight={ins} onChanged={refetchInsights} />

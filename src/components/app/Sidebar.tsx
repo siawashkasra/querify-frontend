@@ -14,6 +14,7 @@ import { twMerge } from "tailwind-merge"
 import { useAppStore } from "@/store/appStore"
 import { useAuthStore } from "@/store/authStore"
 import { connections, insights as insightsApi, me as meApi, query as queryApi } from "@/lib/api"
+import { INSIGHTS_ENABLED } from "@/lib/featureFlags"
 import { usePermissions } from "@/lib/permissions"
 import { useAuth } from "@/hooks/useAuth"
 import type { Connection, Insight, ChatSession } from "@/types"
@@ -128,12 +129,13 @@ function TenantSelector({ collapsed }: { collapsed: boolean }) {
 
 // ── Nav items ─────────────────────────────────────────────────────────────────
 
-interface NavItem { label: string; icon: React.ElementType; href: string; permission?: string }
+interface NavItem { label: string; icon: React.ElementType; href: string; permission?: string; enabled?: boolean }
 
 const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, href: "/dashboard" },
   { label: "Connections", icon: Database, href: "/connections" },
-  { label: "Insights", icon: Sparkles, href: "/insights" },
+  // Insights folded into the dashboard for now — restored by NEXT_PUBLIC_INSIGHTS_ENABLED=true.
+  { label: "Insights", icon: Sparkles, href: "/insights", enabled: INSIGHTS_ENABLED },
   { label: "Activity", icon: FileText, href: "/audit-log", permission: "audit_log:view" },
   { label: "Settings", icon: Settings, href: "/settings", permission: "settings:view" },
 ]
@@ -397,7 +399,7 @@ export const Sidebar = () => {
     queryFn: () => insightsApi.list(activeConnectionId ?? undefined, true) as Promise<Insight[]>,
     staleTime: 5 * 60_000,
     refetchInterval: 5 * 60_000,
-    enabled: !!activeConnectionId,
+    enabled: INSIGHTS_ENABLED && !!activeConnectionId,   // no badge fetch while Insights is hidden
   })
 
   const unreadCount = unreadInsights?.length ?? 0
@@ -475,7 +477,7 @@ export const Sidebar = () => {
 
         {/* Nav items */}
         <nav className={cn("px-2 py-1 flex flex-col gap-0.5 shrink-0", sidebarCollapsed && "px-2")}>
-          {NAV_ITEMS.filter(({ permission }) => !permission || can(permission)).map(({ label, icon: Icon, href }) => {
+          {NAV_ITEMS.filter(({ permission, enabled }) => enabled !== false && (!permission || can(permission))).map(({ label, icon: Icon, href }) => {
             const isActive = href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href)
             const showBadge = label === "Insights" && unreadCount > 0
             return (

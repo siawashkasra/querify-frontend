@@ -4,11 +4,18 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Bell, X, AlertCircle, Info, ExternalLink } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { alerts as alertsApi, connections as connectionsApi } from "@/lib/api"
+import { INSIGHTS_ENABLED } from "@/lib/featureFlags"
 import type { ConnectionAlert, AlertPriority, Connection } from "@/types"
 import { clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 
 const cn = (...inputs: Parameters<typeof clsx>) => twMerge(clsx(inputs))
+
+// While Insights is hidden, send any alert that deep-linked to /insights to the dashboard instead.
+function _safeActionUrl(url: string): string {
+  if (!INSIGHTS_ENABLED && url.startsWith("/insights")) return "/dashboard"
+  return url
+}
 
 function priorityIcon(priority: AlertPriority) {
   if (priority === "high") return <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
@@ -28,7 +35,7 @@ function AlertRow({ alert, onAck, connectionName }: { alert: ConnectionAlert; on
           <span className="text-[11px] text-slate-400">{formatDistanceToNow(new Date(alert.created_at), { addSuffix: true })}</span>
         </div>
         {alert.action_label && alert.action_url && (
-          <a href={alert.action_url} className="mt-2 inline-flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 font-medium">
+          <a href={_safeActionUrl(alert.action_url)} className="mt-2 inline-flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 font-medium">
             {alert.action_label} <ExternalLink className="w-3 h-3" />
           </a>
         )}

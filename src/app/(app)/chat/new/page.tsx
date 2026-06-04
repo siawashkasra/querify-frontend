@@ -6,12 +6,12 @@ import { useAppStore } from "@/store/appStore"
 import { query as queryApi } from "@/lib/api"
 import { useChatStore } from "@/store/chatStore"
 import { useAbortController } from "@/hooks/useAbortController"
+import { runStreaming } from "@/lib/runStreaming"
 import SessionSidebar from "@/components/chat/SessionSidebar"
 import ChatHeader from "@/components/chat/ChatHeader"
 import MessageThread from "@/components/chat/MessageThread"
 import PromptInput, { type PromptInputHandle } from "@/components/chat/PromptInput"
 import SuggestedPrompts from "@/components/chat/SuggestedPrompts"
-import type { QueryResult } from "@/types"
 
 const NEW_SESSION_KEY = "__new__"
 
@@ -27,7 +27,7 @@ function NewChatPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { activeConnectionId, setActiveConnection } = useAppStore()
-  const { threads, addUserMessage, addLoadingMessage, resolveMessage, rejectMessage, migrateThread } = useChatStore()
+  const { threads, addUserMessage, addLoadingMessage, resolveMessage, rejectMessage, setMessageStage, setMessagePartial, migrateThread } = useChatStore()
   const { getSignal, cancel } = useAbortController()
   const [loading, setLoading] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -57,20 +57,12 @@ function NewChatPage() {
     try {
       const resolvedSession = await ensureSession(activeConnectionId)
       if (resolvedSession !== sid) migrateThread(sid, resolvedSession)
-      const signal = getSignal()
-      const result = await queryApi.execute({ prompt, session_id: resolvedSession, connection_id: activeConnectionId }, signal) as QueryResult
-      if (result.status === "failed" || result.status === "timeout") {
-        rejectMessage(resolvedSession, loadingId, result.message ?? "Query failed.", result.error_type ?? null, result.message ?? null)
-      } else {
-        resolveMessage(resolvedSession, loadingId, result)
-      }
-    } catch (err: unknown) {
-      const isAbort = err instanceof Error && err.name === "AbortError"
-      const apiErr = err as { error_type?: string; message?: string } | null
-      const message = isAbort ? "Query cancelled." : (apiErr?.message ?? "Query failed.")
-      const errorType = isAbort ? null : (apiErr?.error_type ?? null)
-      const key = sessionId ?? NEW_SESSION_KEY
-      rejectMessage(key, loadingId, message, errorType, message)
+      await runStreaming(
+        { setMessageStage, setMessagePartial, resolveMessage, rejectMessage },
+        resolvedSession, loadingId,
+        { prompt, session_id: resolvedSession, connection_id: activeConnectionId },
+        getSignal(),
+      )
     } finally {
       setLoading(false)
     }

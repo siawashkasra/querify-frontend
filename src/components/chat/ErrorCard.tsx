@@ -22,10 +22,11 @@ interface ErrorCardProps {
   errorType?: string | null
   errorDetail?: string | null
   onRetry?: () => void
+  retryLabel?: string
   onRephrase?: () => void
 }
 
-export const ErrorCard = ({ errorType, errorDetail, onRetry, onRephrase }: ErrorCardProps) => {
+export const ErrorCard = ({ errorType, errorDetail, onRetry, retryLabel, onRephrase }: ErrorCardProps) => {
   const router = useRouter()
 
   const config = ((): ErrorCardConfig => {
@@ -64,9 +65,10 @@ export const ErrorCard = ({ errorType, errorDetail, onRetry, onRephrase }: Error
       case "EXEC_TIMEOUT":
         return {
           icon: AlertTriangle,
-          title: "This query took too long to complete.",
-          body: "Try a more specific question or add a date range to limit results.",
-          actions: [...(onRetry ? [{ label: "Try again", icon: RefreshCw, onClick: onRetry }] : [])],
+          title: "This is a large query.",
+          // The backend sends a specific, actionable message (names the cause + narrowing).
+          body: errorDetail ?? "Try a more specific question or add a date range to limit results.",
+          actions: [...(onRetry ? [{ label: retryLabel ?? "Run on last 30 days", icon: RefreshCw, onClick: onRetry }] : [])],
         }
       case "UNSAFE":
       case "UNSAFE_BLOCKED":

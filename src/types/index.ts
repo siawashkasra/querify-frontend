@@ -228,6 +228,7 @@ export interface QueryResult {
   follow_ups?: string[]
   caveats?: string[]
   blocks?: ResponseBlock[]
+  retry_prompt?: string | null
 }
 
 export type InsightType = "revenue_trend" | "new_users" | "churn_signal" | "top_performer" | "anomaly" | "recurring_question"
@@ -462,4 +463,45 @@ export interface DashboardSummary {
   status: string
   business_type: string | null
   has_dashboard: boolean
+}
+
+// ── AI business briefing (Odoo-style home dashboard) ─────────────────────────
+export interface BriefingKpiData {
+  id: string
+  label: string
+  format: "currency" | "percent" | "number"
+  good_direction: "up" | "down"
+  icon_hint: string
+  value: number | null
+  formatted: string
+  previous: number | null
+  delta_abs: number | null
+  delta_pct: number | null
+  direction: "up" | "down" | "flat"
+  is_good: boolean | null
+  sparkline: { period: string; value: number }[]
+  caption: string | null
+  status: string
+}
+
+export interface BriefingPriority {
+  priority: "high" | "medium" | "low"
+  direction: "risk" | "positive" | "neutral"
+  title: string
+  detail: string
+  explore_question: string
+  deep_link_label: string
+}
+
+export interface BriefingData {
+  connection_id: string
+  business_type: string
+  business_summary: string
+  greeting_summary: string
+  headline_paragraph: string
+  status: "ok" | "partial" | "no_definition"
+  kpis: BriefingKpiData[]
+  priorities: BriefingPriority[]
+  resolved_at: string | null
+  cached: boolean
 }

@@ -409,6 +409,13 @@ export const dashboard = {
   customise: (connectionId: string, body: { order?: string[]; hidden_charts?: string[]; pinned_chart?: Record<string, unknown> }) =>
     patch<Record<string, unknown>>(`/api/v1/dashboard/${connectionId}/definition`, body),
   summaries: () => get<import("@/types").DashboardSummary[]>("/api/v1/dashboard"),
+  // AI business briefing (the home dashboard)
+  briefing: (connectionId: string) =>
+    get<import("@/types").BriefingData>(`/api/v1/briefing/${connectionId}`),
+  refreshBriefing: (connectionId: string) =>
+    post<import("@/types").BriefingData>(`/api/v1/briefing/${connectionId}/refresh`),
+  customiseBriefing: (connectionId: string, body: { order?: string[]; hidden_kpis?: string[]; pinned_kpi?: Record<string, unknown> }) =>
+    patch<Record<string, unknown>>(`/api/v1/briefing/${connectionId}/definition`, body),
 }
 
 export const query = {

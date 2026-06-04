@@ -8,6 +8,7 @@ import { connections as connectionsApi, query as queryApi } from "@/lib/api"
 import { useChatStore } from "@/store/chatStore"
 import type { ThreadMessage } from "@/store/chatStore"
 import { useAbortController } from "@/hooks/useAbortController"
+import { runStreaming } from "@/lib/runStreaming"
 import { usePlan } from "@/hooks/usePlan"
 import { useSuggestedQuestions } from "@/hooks/useSuggestedQuestions"
 import ChatHeader from "@/components/chat/ChatHeader"
@@ -36,6 +37,8 @@ export default function ChatPage({ params }: ChatPageProps) {
     addLoadingMessage,
     resolveMessage,
     rejectMessage,
+    setMessageStage,
+    setMessagePartial,
     loadThread,
     addPanelUserMessage,
     addPanelLoadingMessage,
@@ -150,30 +153,20 @@ export default function ChatPage({ params }: ChatPageProps) {
       addUserMessage(sessionId, prompt)
       const loadingId = addLoadingMessage(sessionId)
       try {
-        const signal = getSignal()
-        const result = (await queryApi.execute(
+        await runStreaming(
+          { setMessageStage, setMessagePartial, resolveMessage, rejectMessage },
+          sessionId, loadingId,
           { prompt, session_id: sessionId, connection_id: activeConnectionId },
-          signal
-        )) as QueryResult
-        if (result.status === "failed" || result.status === "timeout") {
-          rejectMessage(sessionId, loadingId, result.message ?? "Query failed.", result.error_type ?? null, result.message ?? null)
-        } else {
-          resolveMessage(sessionId, loadingId, result)
-        }
+          getSignal(),
+        )
         qc.invalidateQueries({ queryKey: ["session-messages", sessionId] })
         qc.invalidateQueries({ queryKey: ["sessions"] })
         if (!sessionTitle) setSessionTitle(prompt.slice(0, 40))
-      } catch (err: unknown) {
-        const isAbort = err instanceof Error && err.name === "AbortError"
-        const apiErr = err as { error_type?: string; message?: string } | null
-        const message = isAbort ? "Query cancelled." : (apiErr?.message ?? "Query failed.")
-        const errorType = isAbort ? null : (apiErr?.error_type ?? null)
-        rejectMessage(sessionId, loadingId, message, errorType, message)
       } finally {
         setLoading(false)
       }
     },
-    [activeConnectionId, sessionId, sessionTitle, addUserMessage, addLoadingMessage, resolveMessage, rejectMessage, getSignal, qc]
+    [activeConnectionId, sessionId, sessionTitle, addUserMessage, addLoadingMessage, resolveMessage, rejectMessage, setMessageStage, setMessagePartial, getSignal, qc]
   )
 
   const handlePanelSubmit = useCallback(

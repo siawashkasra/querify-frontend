@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { ChevronDown, ChevronUp, ArrowRight, AlertTriangle } from "lucide-react"
 import { useQuery } from "@tanstack/react-query"
 import { insights as insightsApi, connections } from "@/lib/api"
+import { INSIGHTS_ENABLED } from "@/lib/featureFlags"
 import { InsightCard } from "@/components/insights/InsightCard"
 import { track } from "@/lib/analytics"
 import { cn } from "@/lib/cn"
@@ -86,7 +87,7 @@ export const InsightsReveal = ({ connectionId, databaseName, revealStartMs }: In
               "transition-all duration-500",
               i < visibleCards ? "opacity-100 translate-y-0" : "opacity-0 translate-y-5"
             )}>
-              <InsightCard insight={insight} onOpenModal={() => router.push("/insights")} />
+              <InsightCard insight={insight} onOpenModal={() => router.push(INSIGHTS_ENABLED ? "/insights" : "/dashboard")} />
             </div>
           ))}
           {displayInsights.length === 0 && ctaVisible && (

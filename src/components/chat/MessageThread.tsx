@@ -8,6 +8,14 @@ import ResponseRenderer from "./ResponseRenderer"
 import ErrorCard from "./ErrorCard"
 import AnalyticalResponseCard from "./AnalyticalResponseCard"
 import type { ThreadMessage } from "@/store/chatStore"
+import type { QueryResult } from "@/types"
+
+// Base used to render a Stage-1 partial result before the full result arrives.
+const EMPTY_RESULT: QueryResult = {
+  message_id: "", status: "success", summary: null, sql: null, chart_config: null,
+  kpi_cards: [], columns: [], rows: [], assumptions: [], error_type: null, message: null,
+  suggestions: [], execution_ms: null, total_ms: null,
+}
 
 interface MessageThreadProps {
   messages: ThreadMessage[]
@@ -65,14 +73,31 @@ export const MessageThread = ({
 
           const prevUserMsg = messages.slice(0, idx).reverse().find((m) => m.role === "user")
 
+          const partial = msg.partial
+          const hasPartial = !!partial && Array.isArray(partial.rows) && partial.rows.length > 0
+
           return (
             <div key={msg.id} className="flex flex-col gap-4">
-              {msg.loading && <TypingIndicator />}
+              {msg.loading && !hasPartial && <TypingIndicator stage={msg.stage} />}
+              {/* Stage 1 — the answer (chart/number) appears immediately, with an
+                  'Analysing…' shimmer where the narrative will stream in. */}
+              {msg.loading && hasPartial && (
+                <div className="bg-white border border-[var(--border)] rounded-2xl shadow-sm px-6 py-5">
+                  <ResultCard result={{ ...EMPTY_RESULT, ...partial } as QueryResult} prompt={prevUserMsg?.prompt} connectionName={connectionName} />
+                  <div className="mt-4 flex items-center gap-2 text-xs text-[var(--text-muted)]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" /> {msg.stage || "Analysing…"}
+                  </div>
+                </div>
+              )}
               {!msg.loading && (msg.error || msg.errorType) && (
                 <ErrorCard
                   errorType={msg.errorType}
                   errorDetail={msg.errorDetail}
-                  onRetry={onRetry && prevUserMsg?.prompt ? () => onRetry(prevUserMsg.prompt!) : undefined}
+                  onRetry={
+                    msg.retryPrompt && onSuggestedQuestion ? () => onSuggestedQuestion(msg.retryPrompt!)
+                    : onRetry && prevUserMsg?.prompt ? () => onRetry(prevUserMsg.prompt!) : undefined
+                  }
+                  retryLabel={msg.retryPrompt ? "Run on last 30 days" : undefined}
                   onRephrase={onFollowUp}
                 />
               )}

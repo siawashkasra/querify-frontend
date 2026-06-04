@@ -9,7 +9,10 @@ export interface ThreadMessage {
   error?: string
   errorType?: string | null
   errorDetail?: string | null
+  retryPrompt?: string | null
   loading?: boolean
+  stage?: string                       // live pipeline stage text while streaming
+  partial?: Partial<QueryResult>       // Stage-1 (chart/number) before the analysis arrives
   createdAt: Date
 }
 
@@ -28,7 +31,9 @@ interface ChatState {
   addUserMessage: (sessionId: string, prompt: string) => string
   addLoadingMessage: (sessionId: string) => string
   resolveMessage: (sessionId: string, tempId: string, result: QueryResult) => void
-  rejectMessage: (sessionId: string, tempId: string, error: string, errorType?: string | null, errorDetail?: string | null) => void
+  rejectMessage: (sessionId: string, tempId: string, error: string, errorType?: string | null, errorDetail?: string | null, retryPrompt?: string | null) => void
+  setMessageStage: (sessionId: string, tempId: string, stage: string) => void
+  setMessagePartial: (sessionId: string, tempId: string, partial: Partial<QueryResult>) => void
   migrateThread: (from: string, to: string) => void
   clearThread: (sessionId: string) => void
   loadThread: (sessionId: string, messages: ThreadMessage[]) => void
@@ -72,18 +77,38 @@ export const useChatStore = create<ChatState>((set) => ({
       threads: {
         ...s.threads,
         [sessionId]: (s.threads[sessionId] ?? []).map((m) =>
-          m.id === tempId ? { ...m, loading: false, result } : m
+          m.id === tempId ? { ...m, loading: false, stage: undefined, partial: undefined, result } : m
         ),
       },
     }))
   },
 
-  rejectMessage: (sessionId, tempId, error, errorType, errorDetail) => {
+  rejectMessage: (sessionId, tempId, error, errorType, errorDetail, retryPrompt) => {
     set((s) => ({
       threads: {
         ...s.threads,
         [sessionId]: (s.threads[sessionId] ?? []).map((m) =>
-          m.id === tempId ? { ...m, loading: false, error, errorType, errorDetail } : m
+          m.id === tempId ? { ...m, loading: false, stage: undefined, partial: undefined, error, errorType, errorDetail, retryPrompt: retryPrompt ?? null } : m
+        ),
+      },
+    }))
+  },
+
+  setMessageStage: (sessionId, tempId, stage) => {
+    set((s) => ({
+      threads: {
+        ...s.threads,
+        [sessionId]: (s.threads[sessionId] ?? []).map((m) => (m.id === tempId ? { ...m, stage } : m)),
+      },
+    }))
+  },
+
+  setMessagePartial: (sessionId, tempId, partial) => {
+    set((s) => ({
+      threads: {
+        ...s.threads,
+        [sessionId]: (s.threads[sessionId] ?? []).map((m) =>
+          m.id === tempId ? { ...m, partial: { ...(m.partial ?? {}), ...partial } } : m
         ),
       },
     }))

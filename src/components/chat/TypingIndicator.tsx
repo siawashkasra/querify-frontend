@@ -10,13 +10,14 @@ const STAGES = [
   "Summarising results...",
 ]
 
-export const TypingIndicator = () => {
+export const TypingIndicator = ({ stage: liveStage }: { stage?: string } = {}) => {
   const [stage, setStage] = useState(0)
 
   useEffect(() => {
+    if (liveStage) return  // real streamed stage text takes over from the timed fallback
     const interval = setInterval(() => setStage((s) => Math.min(s + 1, STAGES.length - 1)), 2000)
     return () => clearInterval(interval)
-  }, [])
+  }, [liveStage])
 
   return (
     <div data-testid="typing-indicator" className="flex items-start gap-3 py-3">
@@ -33,7 +34,7 @@ export const TypingIndicator = () => {
             />
           ))}
         </div>
-        <p className="text-xs text-[var(--text-muted)] pl-1 transition-all">{STAGES[stage]}</p>
+        <p className="text-xs text-[var(--text-muted)] pl-1 transition-all">{liveStage || STAGES[stage]}</p>
       </div>
     </div>
   )
