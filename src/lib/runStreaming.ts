@@ -1,12 +1,16 @@
-// Drives a streaming query into the chat store: live stage text, a Stage-1
-// progressive result (chart/number), then the Stage-2 analysis, then the final
+// Drives a streaming query into the chat store: live stage text, the analysis
+// plan, a Stage-1 progressive result (chart/number), each sub-finding the
+// moment its query completes, then the synthesized analysis, then the final
 // result (or an actionable error with a retry prompt).
 import { streamQuery, type StreamEvent } from "@/lib/streamQuery"
+import type { StreamFinding, StreamPlan } from "@/store/chatStore"
 import type { QueryResult } from "@/types"
 
 interface StoreActions {
   setMessageStage: (sessionId: string, id: string, stage: string) => void
   setMessagePartial: (sessionId: string, id: string, partial: Partial<QueryResult>) => void
+  setMessagePlan: (sessionId: string, id: string, plan: StreamPlan) => void
+  addMessageFinding: (sessionId: string, id: string, finding: StreamFinding) => void
   resolveMessage: (sessionId: string, id: string, result: QueryResult) => void
   rejectMessage: (sessionId: string, id: string, error: string, errorType?: string | null, errorDetail?: string | null, retryPrompt?: string | null) => void
 }
@@ -25,10 +29,30 @@ export async function runStreaming(
         case "stage":
           store.setMessageStage(sessionId, loadingId, String(e.message ?? ""))
           break
+        case "plan":
+          // the investigation plan — renders as a checklist the findings tick off
+          store.setMessagePlan(sessionId, loadingId, {
+            intent: e.intent as string | undefined,
+            summary: e.summary as string | undefined,
+            sub_questions: (e.sub_questions ?? []) as StreamPlan["sub_questions"],
+          })
+          break
         case "result":
           store.setMessagePartial(sessionId, loadingId, {
             columns: e.columns as string[], rows: e.rows as unknown[],
             chart_config: e.chart_config as QueryResult["chart_config"], kpi_cards: (e.kpi_cards ?? []) as QueryResult["kpi_cards"],
+          })
+          break
+        case "sub_result":
+          // a finding lands the instant its query returns — progressive depth
+          store.addMessageFinding(sessionId, loadingId, {
+            index: Number(e.index ?? 0),
+            role: String(e.role ?? ""),
+            question: String(e.question ?? ""),
+            columns: (e.columns ?? []) as string[],
+            rows: (e.rows ?? []) as unknown[],
+            chart_config: (e.chart_config ?? null) as StreamFinding["chart_config"],
+            error: (e.error ?? null) as string | null,
           })
           break
         case "analysis":
@@ -36,6 +60,7 @@ export async function runStreaming(
             headline: e.headline as string, summary: e.summary as string,
             insights: (e.insights ?? []) as string[], blocks: (e.blocks ?? []) as QueryResult["blocks"],
             follow_ups: (e.follow_ups ?? []) as string[],
+            analytical_narrative: (e.narrative ?? null) as string | null,
           })
           break
         case "done":

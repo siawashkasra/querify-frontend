@@ -156,8 +156,10 @@ export interface AnalystKpiCard {
 export type ResponseBlock =
   | { type: "headline_block"; text: string; summary?: string | null }
   | { type: "kpi_row"; cards: AnalystKpiCard[] }
-  | { type: "chart_block"; config: ChartConfig }
+  // chart blocks may carry their OWN data (a §B sub-result), falling back to the result rows
+  | { type: "chart_block"; config: ChartConfig; columns?: string[]; rows?: unknown[][]; question?: string; role?: string }
   | { type: "insight_block"; insights: string[] }
+  | { type: "narrative_block"; heading?: string | null; text: string }
   | { type: "table_block"; columns: string[]; rows: unknown[][]; ranked?: boolean; percent_column?: string | null }
   | { type: "caveat_block"; caveats: string[] }
   | { type: "followup_block"; questions: string[] }
@@ -292,13 +294,46 @@ export interface ExportJob {
   completed_at: string | null
 }
 
-export type PipelineStage = "introspection" | "context" | "insights" | "complete" | "failed"
+export type PipelineStage = "introspection" | "context" | "model" | "insights" | "complete" | "failed"
 
 export interface PipelineStatus {
   stage: PipelineStage
   progress_pct: number
   insights_count: number
+  requires_confirmation?: boolean
   error?: string | null
+}
+
+// ── semantic model confirmation (onboarding) ────────────────────────────────
+export interface ModelMeasure {
+  name: string
+  table: string
+  expr: string
+  unit?: string
+  source?: string
+  confidence?: string
+}
+
+export interface ModelSummary {
+  business_summary: string
+  business_type: string
+  readings: string[]
+  measures: ModelMeasure[]
+  entities: { name: string; table: string; kind: string }[]
+  dimensions: { name: string; table: string; column: string; sample_values?: unknown[] }[]
+  time_grain: string | null
+  ignored_tables: string[]
+  confirmed: boolean | null
+  dashboard_preview?: { name: string; format?: string }[]
+}
+
+export interface ConfirmModelResponse {
+  ack: string
+  applied: string[]
+  rejected: string[]
+  confirmed: boolean
+  dashboard_ready: boolean
+  model: ModelSummary
 }
 
 export interface SuggestedQuestion {
@@ -480,8 +515,36 @@ export interface BriefingKpiData {
   direction: "up" | "down" | "flat"
   is_good: boolean | null
   sparkline: { period: string; value: number }[]
+  trend: { direction: "up" | "down" | "flat"; rate_pct: number; label: string } | null
   caption: string | null
   status: string
+}
+
+export interface BriefingDriverEntry {
+  segment: string
+  delta: number
+  formatted: string
+  current: number
+  previous: number
+}
+
+export interface BriefingDrivers {
+  measure: string
+  dimension: string
+  format: string
+  window: string
+  total_delta: number
+  formatted_delta: string
+  gainers: BriefingDriverEntry[]
+  drags: BriefingDriverEntry[]
+  text: string
+}
+
+export interface BriefingPattern {
+  type: string
+  headline: string
+  summary: string
+  trend_direction?: string | null
 }
 
 export interface BriefingPriority {
@@ -502,6 +565,8 @@ export interface BriefingData {
   status: "ok" | "partial" | "no_definition"
   kpis: BriefingKpiData[]
   priorities: BriefingPriority[]
+  drivers: BriefingDrivers | null
+  patterns: BriefingPattern[]
   resolved_at: string | null
   cached: boolean
 }

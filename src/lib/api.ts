@@ -16,6 +16,8 @@ import type {
   InsightGenerationStatus,
   ConnectionAlert,
   AlertPreferences,
+  ModelSummary,
+  ConfirmModelResponse,
 } from "@/types"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -340,6 +342,10 @@ export const connections = {
   getContext: (id: string) => get<Record<string, unknown>>(`/api/v1/connections/${id}/context`),
   pipelineStatus: (id: string) =>
     get<PipelineStatus>(`/api/v1/connections/${id}/pipeline-status`),
+  modelSummary: (id: string) =>
+    get<ModelSummary>(`/api/v1/connections/${id}/model`),
+  confirmModel: (id: string, correction?: string) =>
+    post<ConfirmModelResponse>(`/api/v1/connections/${id}/model/confirm`, { correction: correction || null }),
   corrections: (id: string) => get<unknown[]>(`/api/v1/connections/${id}/corrections`),
   suggestedQuestions: (id: string) =>
     get<SuggestedQuestion[]>(`/api/v1/connections/${id}/suggested-questions`),

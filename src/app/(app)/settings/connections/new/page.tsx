@@ -11,9 +11,10 @@ import DbTypeSelector, { type DbTypeValue } from "@/components/connections/DbTyp
 import StepDetails, { type ConnectionFormData } from "@/components/connections/StepDetails"
 import StepReview from "@/components/connections/StepReview"
 import { OnboardingProgress } from "@/components/onboarding/OnboardingProgress"
+import { ModelConfirmCard } from "@/components/onboarding/ModelConfirmCard"
 import { InsightsReveal, FallbackState } from "@/components/onboarding/InsightsReveal"
 
-type Phase = "type" | "form" | "review" | "progress" | "reveal" | "fallback"
+type Phase = "type" | "form" | "review" | "progress" | "confirm" | "reveal" | "fallback"
 
 const STEPS = ["Database type", "Connection details", "Review", "Setup"]
 
@@ -84,10 +85,24 @@ export default function NewConnectionPage() {
     }
   }
 
-  const handleProgressComplete = useCallback((insightsCount: number) => {
+  const handleProgressComplete = useCallback((insightsCount: number, requiresConfirmation: boolean) => {
     void insightsCount
+    qc.invalidateQueries({ queryKey: ["connections"] })
+    if (requiresConfirmation) {
+      // the differentiator: show what was understood before revealing anything
+      setPhase("confirm")
+    } else {
+      revealStartMs.current = Date.now()
+      setPhase("reveal")
+    }
+  }, [qc])
+
+  const handleModelConfirmed = useCallback((dashboardReady: boolean) => {
+    void dashboardReady
     revealStartMs.current = Date.now()
     qc.invalidateQueries({ queryKey: ["connections"] })
+    qc.invalidateQueries({ queryKey: ["dashboard"] })
+    qc.invalidateQueries({ queryKey: ["briefing"] })
     setPhase("reveal")
   }, [qc])
 
@@ -103,6 +118,16 @@ export default function NewConnectionPage() {
         connectionId={savedId}
         onComplete={handleProgressComplete}
         onFallback={handleFallback}
+      />
+    )
+  }
+
+  if (phase === "confirm" && savedId) {
+    return (
+      <ModelConfirmCard
+        connectionId={savedId}
+        onConfirmed={handleModelConfirmed}
+        onSkip={() => handleModelConfirmed(false)}
       />
     )
   }

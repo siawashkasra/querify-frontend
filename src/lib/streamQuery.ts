@@ -1,11 +1,12 @@
 // Streaming query client — POSTs to /api/v1/query/stream and parses the SSE
-// event stream (stage / result / analysis / done / error). Uses fetch (not
-// axios/EventSource) so we can send the Bearer token AND abort mid-flight; the
-// abort disconnects the server, which cancels the in-flight DB query.
+// event stream (stage / plan / result / sub_result / analysis / done / error).
+// Uses fetch (not axios/EventSource) so we can send the Bearer token AND abort
+// mid-flight; the abort disconnects the server, which cancels the in-flight DB
+// query (and every analytical sub-query with it).
 import { useAuthStore } from "@/store/authStore"
 
 export interface StreamEvent {
-  type: "stage" | "result" | "analysis" | "done" | "error" | "cancelled"
+  type: "stage" | "plan" | "result" | "sub_result" | "analysis" | "done" | "error" | "cancelled"
   [key: string]: unknown
 }
 

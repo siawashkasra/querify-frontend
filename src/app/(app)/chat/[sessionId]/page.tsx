@@ -39,6 +39,8 @@ export default function ChatPage({ params }: ChatPageProps) {
     rejectMessage,
     setMessageStage,
     setMessagePartial,
+    setMessagePlan,
+    addMessageFinding,
     loadThread,
     addPanelUserMessage,
     addPanelLoadingMessage,
@@ -154,7 +156,7 @@ export default function ChatPage({ params }: ChatPageProps) {
       const loadingId = addLoadingMessage(sessionId)
       try {
         await runStreaming(
-          { setMessageStage, setMessagePartial, resolveMessage, rejectMessage },
+          { setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding, resolveMessage, rejectMessage },
           sessionId, loadingId,
           { prompt, session_id: sessionId, connection_id: activeConnectionId },
           getSignal(),
@@ -166,7 +168,7 @@ export default function ChatPage({ params }: ChatPageProps) {
         setLoading(false)
       }
     },
-    [activeConnectionId, sessionId, sessionTitle, addUserMessage, addLoadingMessage, resolveMessage, rejectMessage, setMessageStage, setMessagePartial, getSignal, qc]
+    [activeConnectionId, sessionId, sessionTitle, addUserMessage, addLoadingMessage, resolveMessage, rejectMessage, setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding, getSignal, qc]
   )
 
   const handlePanelSubmit = useCallback(

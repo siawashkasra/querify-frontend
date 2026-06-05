@@ -1,6 +1,28 @@
 import { create } from "zustand"
 import type { QueryResult } from "@/types"
 
+// ── progressive analytical streaming (plan → findings as they land → synthesis)
+export interface StreamPlanItem {
+  question: string
+  role: "direct" | "context" | "comparison" | "driver" | "risk"
+}
+
+export interface StreamPlan {
+  intent?: string
+  summary?: string
+  sub_questions: StreamPlanItem[]
+}
+
+export interface StreamFinding {
+  index: number
+  role: string
+  question: string
+  columns: string[]
+  rows: unknown[]
+  chart_config?: import("@/types").ChartConfig | null
+  error?: string | null
+}
+
 export interface ThreadMessage {
   id: string
   role: "user" | "assistant"
@@ -13,6 +35,8 @@ export interface ThreadMessage {
   loading?: boolean
   stage?: string                       // live pipeline stage text while streaming
   partial?: Partial<QueryResult>       // Stage-1 (chart/number) before the analysis arrives
+  plan?: StreamPlan                    // the streamed analysis plan (analytical path)
+  findings?: StreamFinding[]           // sub-results, appended as each query completes
   createdAt: Date
 }
 
@@ -34,6 +58,8 @@ interface ChatState {
   rejectMessage: (sessionId: string, tempId: string, error: string, errorType?: string | null, errorDetail?: string | null, retryPrompt?: string | null) => void
   setMessageStage: (sessionId: string, tempId: string, stage: string) => void
   setMessagePartial: (sessionId: string, tempId: string, partial: Partial<QueryResult>) => void
+  setMessagePlan: (sessionId: string, tempId: string, plan: StreamPlan) => void
+  addMessageFinding: (sessionId: string, tempId: string, finding: StreamFinding) => void
   migrateThread: (from: string, to: string) => void
   clearThread: (sessionId: string) => void
   loadThread: (sessionId: string, messages: ThreadMessage[]) => void
@@ -77,7 +103,7 @@ export const useChatStore = create<ChatState>((set) => ({
       threads: {
         ...s.threads,
         [sessionId]: (s.threads[sessionId] ?? []).map((m) =>
-          m.id === tempId ? { ...m, loading: false, stage: undefined, partial: undefined, result } : m
+          m.id === tempId ? { ...m, loading: false, stage: undefined, partial: undefined, plan: undefined, findings: undefined, result } : m
         ),
       },
     }))
@@ -88,7 +114,7 @@ export const useChatStore = create<ChatState>((set) => ({
       threads: {
         ...s.threads,
         [sessionId]: (s.threads[sessionId] ?? []).map((m) =>
-          m.id === tempId ? { ...m, loading: false, stage: undefined, partial: undefined, error, errorType, errorDetail, retryPrompt: retryPrompt ?? null } : m
+          m.id === tempId ? { ...m, loading: false, stage: undefined, partial: undefined, plan: undefined, findings: undefined, error, errorType, errorDetail, retryPrompt: retryPrompt ?? null } : m
         ),
       },
     }))
@@ -109,6 +135,28 @@ export const useChatStore = create<ChatState>((set) => ({
         ...s.threads,
         [sessionId]: (s.threads[sessionId] ?? []).map((m) =>
           m.id === tempId ? { ...m, partial: { ...(m.partial ?? {}), ...partial } } : m
+        ),
+      },
+    }))
+  },
+
+  setMessagePlan: (sessionId, tempId, plan) => {
+    set((s) => ({
+      threads: {
+        ...s.threads,
+        [sessionId]: (s.threads[sessionId] ?? []).map((m) => (m.id === tempId ? { ...m, plan } : m)),
+      },
+    }))
+  },
+
+  addMessageFinding: (sessionId, tempId, finding) => {
+    set((s) => ({
+      threads: {
+        ...s.threads,
+        [sessionId]: (s.threads[sessionId] ?? []).map((m) =>
+          m.id === tempId
+            ? { ...m, findings: [...(m.findings ?? []).filter((f) => f.index !== finding.index), finding] }
+            : m
         ),
       },
     }))

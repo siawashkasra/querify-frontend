@@ -10,10 +10,11 @@ import type { PipelineStage, PipelineStatus } from "@/types"
 const STEPS = [
   { id: "introspection", label: "Reading schema" },
   { id: "context", label: "Understanding data" },
+  { id: "model", label: "Verifying with data" },
   { id: "insights", label: "Finding insights" },
 ] as const
 
-const STAGE_TO_STEP: Record<string, number> = { introspection: 0, context: 1, insights: 2, complete: 3 }
+const STAGE_TO_STEP: Record<string, number> = { introspection: 0, context: 1, model: 2, insights: 3, complete: 4 }
 
 const CONTEXT_MESSAGES = [
   "Identifying your revenue metrics...",
@@ -24,6 +25,7 @@ const CONTEXT_MESSAGES = [
 const MAIN_MESSAGES: Record<string, string> = {
   introspection: "Reading your database structure...",
   context: "Understanding what your data means...",
+  model: "Checking my reading against your real data...",
   insights: "Generating your first insights...",
   complete: "All done!",
 }
@@ -33,7 +35,7 @@ const TIMEOUT_MS = 100_000
 
 export interface OnboardingProgressProps {
   connectionId: string
-  onComplete: (insightsCount: number) => void
+  onComplete: (insightsCount: number, requiresConfirmation: boolean) => void
   onFallback: (reason: string) => void
 }
 
@@ -71,6 +73,7 @@ export const OnboardingProgress = ({ connectionId, onComplete, onFallback }: Onb
   const getSubText = useCallback((s: PipelineStatus): string => {
     if (s.stage === "introspection") return "Scanning tables, columns, and relationships..."
     if (s.stage === "context") return CONTEXT_MESSAGES[contextMsgIdx]
+    if (s.stage === "model") return "Sampling values to verify measures and entities..."
     if (s.stage === "insights") return `Almost ready — ${s.insights_count} of 3 insights found`
     return ""
   }, [contextMsgIdx])
@@ -97,7 +100,7 @@ export const OnboardingProgress = ({ connectionId, onComplete, onFallback }: Onb
         doneRef.current = true
         stopPolling()
         setExiting(true)
-        setTimeout(() => onComplete((s as PipelineStatus).insights_count), 500)
+        setTimeout(() => onComplete((s as PipelineStatus).insights_count, !!(s as PipelineStatus).requires_confirmation), 500)
       } else if (newStage === "failed") {
         doneRef.current = true
         stopPolling()

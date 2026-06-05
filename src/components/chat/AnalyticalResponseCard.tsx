@@ -123,7 +123,8 @@ interface AnalyticalResponseCardProps {
   onSuggestedQuestion?: (question: string) => void
 }
 
-const KNOWN_SECTIONS = ["Summary", "Key Metrics", "Trend", "What to Watch", "Suggested Questions"]
+const KNOWN_SECTIONS = ["Summary", "Key Metrics", "Trend", "What to Watch", "Suggested Questions",
+  "Answer", "Context & Comparison", "Why", "Implication"]
 
 export const AnalyticalResponseCard = ({ result, onSuggestedQuestion }: AnalyticalResponseCardProps) => {
   const narrative = result.analytical_narrative || ""
@@ -149,10 +150,10 @@ export const AnalyticalResponseCard = ({ result, onSuggestedQuestion }: Analytic
         return (
           <div key={heading} className="flex flex-col gap-1.5">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">{heading}</h4>
-            {heading === "Summary" && <SummarySection content={content} />}
+            {(heading === "Summary" || heading === "Answer") && <SummarySection content={content} />}
             {heading === "Key Metrics" && <KeyMetricsSection content={content} />}
-            {heading === "Trend" && <TrendSection content={content} />}
-            {heading === "What to Watch" && <WatchSection content={content} />}
+            {(heading === "Trend" || heading === "Context & Comparison") && <TrendSection content={content} />}
+            {(heading === "What to Watch" || heading === "Why" || heading === "Implication") && <WatchSection content={content} />}
             {heading === "Suggested Questions" && <SuggestedQuestionsSection content={content} onSuggestedQuestion={onSuggestedQuestion} />}
             {!KNOWN_SECTIONS.includes(heading) && <p className="text-sm text-[var(--text-dim)] leading-relaxed">{content}</p>}
           </div>

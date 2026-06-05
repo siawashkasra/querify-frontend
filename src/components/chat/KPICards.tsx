@@ -2,16 +2,16 @@
 
 import { TrendingUp, TrendingDown, Minus } from "lucide-react"
 import { cn } from "@/lib/cn"
+import { formatByField } from "@/lib/formatNumber"
 import type { KPICard as KPICardType } from "@/types"
 
 interface KPICardsProps {
   cards: KPICardType[]
 }
 
-function formatValue(value: number | string): string {
-  if (typeof value === "number") {
-    return value.toLocaleString("en-US", { maximumFractionDigits: 2 })
-  }
+// Human formatting by field name ($1.2M, 12.4%) — raw numbers are never shown.
+function formatValue(value: number | string, label?: string): string {
+  if (typeof value === "number") return formatByField(value, label)
   return String(value)
 }
 
@@ -29,7 +29,7 @@ export const KPICards = ({ cards }: KPICardsProps) => (
             {card.label}
           </span>
           <span className="text-2xl font-semibold font-mono text-brand leading-tight">
-            {formatValue(card.value)}
+            {formatValue(card.value, card.label)}
           </span>
           {card.delta != null && (
             <div className={cn(

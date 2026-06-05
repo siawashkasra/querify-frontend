@@ -70,10 +70,25 @@ function KpiRow({ cards }: { cards: AnalystKpiCard[] }) {
   )
 }
 
-function ChartBlock({ config, rows }: { config: ChartConfig; rows: Record<string, unknown>[] }) {
+function ChartBlock({ config, rows, question }: { config: ChartConfig; rows: Record<string, unknown>[]; question?: string }) {
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-white p-4">
+    <div className="rounded-xl border border-[var(--border)] bg-white p-4 flex flex-col gap-1">
+      {question && config.role === "supporting" && (
+        <p className="text-[10px] uppercase tracking-wider text-[var(--text-muted)]">{question}</p>
+      )}
       <QueryChart config={config} rows={rows} />
+    </div>
+  )
+}
+
+// The written "why"/driver prose from the synthesized §B narrative.
+function NarrativeBlock({ heading, text }: { heading?: string | null; text: string }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      {heading && <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--text-muted)]">{heading}</h4>}
+      {text.split("\n").filter(Boolean).map((line, i) => (
+        <p key={i} className="text-sm leading-[1.7] text-[var(--text-dim)]">{boldNumbers(line)}</p>
+      ))}
     </div>
   )
 }
@@ -116,8 +131,11 @@ function TableBlock({ columns, rows, ranked, percentColumn }: { columns: string[
             <tr key={ri} className={cn("border-b border-[var(--border)] last:border-0", ranked && ri === 0 && "bg-brand/[0.04]")}>
               {ranked && <td className="px-3 py-2 font-mono text-[var(--text-muted)]">{ri + 1}</td>}
               {columns.map((c, ci) => (
-                <td key={c} className={cn("px-3 py-2 text-[var(--text-dim)]", ci === pctIdx && "font-mono")}>
-                  {ci === pctIdx ? formatByField(row[ci], c) : (typeof row[ci] === "object" ? formatUnknownForUi(row[ci]) : String(row[ci] ?? "—"))}
+                <td key={c} className={cn("px-3 py-2 text-[var(--text-dim)]", (ci === pctIdx || typeof row[ci] === "number") && "font-mono")}>
+                  {/* numbers are always human-formatted ($1.2M / 12.4%) — never raw strings */}
+                  {ci === pctIdx || typeof row[ci] === "number"
+                    ? formatByField(row[ci], c)
+                    : typeof row[ci] === "object" ? formatUnknownForUi(row[ci]) : String(row[ci] ?? "—")}
                 </td>
               ))}
               {pctIdx >= 0 && (
@@ -192,10 +210,17 @@ export const ResponseRenderer = ({ result, connectionName, onSuggestedQuestion, 
             return <HeadlineBlock key={i} text={block.text} summary={block.summary} />
           case "kpi_row":
             return <KpiRow key={i} cards={block.cards} />
-          case "chart_block":
-            return <ChartBlock key={i} config={block.config} rows={rowObjects} />
+          case "chart_block": {
+            // a §B sub-result chart carries its own data; fall back to the result rows
+            const blockRows = block.columns && block.rows
+              ? toRowObjects(block.columns, block.rows)
+              : rowObjects
+            return <ChartBlock key={i} config={block.config} rows={blockRows} question={block.question} />
+          }
           case "insight_block":
             return <InsightBlock key={i} insights={block.insights} />
+          case "narrative_block":
+            return <NarrativeBlock key={i} heading={block.heading} text={block.text} />
           case "table_block":
             return <TableBlock key={i} columns={block.columns} rows={block.rows as unknown[][]} ranked={block.ranked} percentColumn={block.percent_column} />
           case "caveat_block":

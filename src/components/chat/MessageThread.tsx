@@ -7,6 +7,7 @@ import ResultCard from "./ResultCard"
 import ResponseRenderer from "./ResponseRenderer"
 import ErrorCard from "./ErrorCard"
 import AnalyticalResponseCard from "./AnalyticalResponseCard"
+import StreamingAnalysis from "./StreamingAnalysis"
 import type { ThreadMessage } from "@/store/chatStore"
 import type { QueryResult } from "@/types"
 
@@ -75,13 +76,28 @@ export const MessageThread = ({
 
           const partial = msg.partial
           const hasPartial = !!partial && Array.isArray(partial.rows) && partial.rows.length > 0
+          // Analytical streaming: a plan or findings have arrived — the answer
+          // writes itself in progressively, section by section.
+          const isStreamingAnalysis = !!msg.plan || (msg.findings?.length ?? 0) > 0
 
           return (
             <div key={msg.id} className="flex flex-col gap-4">
-              {msg.loading && !hasPartial && <TypingIndicator stage={msg.stage} />}
-              {/* Stage 1 — the answer (chart/number) appears immediately, with an
-                  'Analysing…' shimmer where the narrative will stream in. */}
-              {msg.loading && hasPartial && (
+              {msg.loading && !hasPartial && !isStreamingAnalysis && <TypingIndicator stage={msg.stage} />}
+              {/* Progressive analytical answer: plan → primary chart →
+                  supporting findings → synthesized conclusion. */}
+              {msg.loading && isStreamingAnalysis && (
+                <StreamingAnalysis
+                  plan={msg.plan}
+                  findings={msg.findings}
+                  partial={partial}
+                  stage={msg.stage}
+                  prompt={prevUserMsg?.prompt}
+                  connectionName={connectionName}
+                />
+              )}
+              {/* Stage 1 (single-shot path) — the answer (chart/number) appears
+                  immediately, with an 'Analysing…' shimmer where the summary lands. */}
+              {msg.loading && hasPartial && !isStreamingAnalysis && (
                 <div className="bg-white border border-[var(--border)] rounded-2xl shadow-sm px-6 py-5">
                   <ResultCard result={{ ...EMPTY_RESULT, ...partial } as QueryResult} prompt={prevUserMsg?.prompt} connectionName={connectionName} />
                   <div className="mt-4 flex items-center gap-2 text-xs text-[var(--text-muted)]">
@@ -103,7 +119,10 @@ export const MessageThread = ({
               )}
               {!msg.loading && !msg.error && !msg.errorType && msg.result && (
                 <div className="bg-white border border-[var(--border)] rounded-2xl shadow-sm px-6 py-5">
-                  {msg.result.response_type === "analytical" ? (
+                  {/* The synthesized analytical answer renders as composed
+                      blocks (headline → KPIs → charts → why → follow-ups);
+                      the narrative card is the legacy fallback. */}
+                  {msg.result.response_type === "analytical" && !(msg.result.blocks && msg.result.blocks.length > 0) ? (
                     <AnalyticalResponseCard
                       result={msg.result}
                       prompt={prevUserMsg?.prompt}

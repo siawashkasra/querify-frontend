@@ -27,7 +27,7 @@ function NewChatPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { activeConnectionId, setActiveConnection } = useAppStore()
-  const { threads, addUserMessage, addLoadingMessage, resolveMessage, rejectMessage, setMessageStage, setMessagePartial, migrateThread } = useChatStore()
+  const { threads, addUserMessage, addLoadingMessage, resolveMessage, rejectMessage, setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding, migrateThread } = useChatStore()
   const { getSignal, cancel } = useAbortController()
   const [loading, setLoading] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -58,7 +58,7 @@ function NewChatPage() {
       const resolvedSession = await ensureSession(activeConnectionId)
       if (resolvedSession !== sid) migrateThread(sid, resolvedSession)
       await runStreaming(
-        { setMessageStage, setMessagePartial, resolveMessage, rejectMessage },
+        { setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding, resolveMessage, rejectMessage },
         resolvedSession, loadingId,
         { prompt, session_id: resolvedSession, connection_id: activeConnectionId },
         getSignal(),

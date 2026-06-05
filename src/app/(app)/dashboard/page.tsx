@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
 import { formatDistanceToNow } from "date-fns"
-import { RefreshCw, Database, ArrowRight, Sparkles, AlertTriangle, TrendingUp, Circle } from "lucide-react"
+import { RefreshCw, Database, ArrowRight, Sparkles, AlertTriangle, TrendingUp, TrendingDown, Circle, Lightbulb } from "lucide-react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { useAppStore } from "@/store/appStore"
 import { connections as connectionsApi, dashboard as dashboardApi } from "@/lib/api"
@@ -13,7 +13,7 @@ import EmptyState from "@/components/ui/EmptyState"
 import CanDo from "@/components/auth/CanDo"
 import BriefingKpiCard from "@/components/dashboard/BriefingKpiCard"
 import { useGreeting } from "@/hooks/useGreeting"
-import type { Connection, BriefingData, BriefingPriority } from "@/types"
+import type { Connection, BriefingData, BriefingDrivers, BriefingPattern, BriefingPriority } from "@/types"
 
 // Bold the key numbers in the headline paragraph (sentence stays sans-serif).
 const NUM_RE = /(\$[\d,]+(?:\.\d+)?[KMBkmb]?|\d+(?:\.\d+)?%|\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?)/g
@@ -44,6 +44,57 @@ function PriorityRow({ p, onExplore }: { p: BriefingPriority; onExplore: (q: str
         {p.deep_link_label}
       </button>
     </div>
+  )
+}
+
+// TASK 3 — the value layer: what moved the top measure, and what dragged it.
+function DriversSection({ drivers, onExplore }: { drivers: BriefingDrivers; onExplore: (q: string) => void }) {
+  const rows = [
+    ...drivers.gainers.map((g) => ({ ...g, up: true })),
+    ...drivers.drags.map((d) => ({ ...d, up: false })),
+  ]
+  return (
+    <section className="rounded-xl border border-[#E5E7EB] bg-white px-6 py-5">
+      <h2 className="text-sm font-semibold text-[#111827]">What moved {drivers.measure}</h2>
+      <p className="mt-0.5 text-xs text-[#9CA3AF]">{drivers.window}, by {drivers.dimension.replace(/_/g, " ")}</p>
+      <p className="mt-3 text-sm leading-[1.6] text-[#374151]">{boldNumbers(drivers.text)}</p>
+      {rows.length > 0 && (
+        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {rows.map((r, i) => (
+            <button key={i} onClick={() => onExplore(`Why did ${drivers.measure} for ${r.segment} change over the last 30 days?`)}
+              className="group flex items-center gap-2.5 rounded-lg border border-[#F1F2F4] bg-[#FAFBFC] px-3 py-2.5 text-left hover:border-brand/40 transition-colors">
+              {r.up ? <TrendingUp size={14} className="shrink-0 text-emerald-600" /> : <TrendingDown size={14} className="shrink-0 text-red-500" />}
+              <span className="flex-1 truncate text-sm text-[#374151]">{r.segment}</span>
+              <span className={cn("font-mono text-sm font-semibold", r.up ? "text-emerald-600" : "text-red-500")}>{r.formatted}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  )
+}
+
+// Named, quality-gated patterns from the discovery engine — or nothing at all.
+function PatternsSection({ patterns, onExplore }: { patterns: BriefingPattern[]; onExplore: (q: string) => void }) {
+  return (
+    <section className="rounded-xl border border-[#E5E7EB] bg-white px-6 py-5">
+      <h2 className="text-sm font-semibold text-[#111827]">Patterns in your data</h2>
+      <div className="mt-1 divide-y divide-[#F1F2F4]">
+        {patterns.map((p, i) => (
+          <div key={i} className="flex items-start gap-3 py-3.5">
+            <Lightbulb size={15} className="mt-0.5 shrink-0 text-brand" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-[#111827]">{boldNumbers(p.headline)}</p>
+              {p.summary && <p className="mt-0.5 text-sm leading-[1.55] text-[#4B5563]">{boldNumbers(p.summary)}</p>}
+            </div>
+            <button onClick={() => onExplore(p.headline)}
+              className="shrink-0 rounded-lg border border-[#E5E7EB] px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-brand hover:text-brand transition-colors">
+              Explore
+            </button>
+          </div>
+        ))}
+      </div>
+    </section>
   )
 }
 
@@ -154,9 +205,13 @@ export default function DashboardPage() {
             {/* SECTION B — KPI grid */}
             {visibleKpis.length > 0 && (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                {visibleKpis.map((k) => <BriefingKpiCard key={k.id} kpi={k} />)}
+                {visibleKpis.map((k) => <BriefingKpiCard key={k.id} kpi={k} onExplore={(q) => ask(q)} />)}
               </div>
             )}
+
+            {/* SECTION B2 — the value layer: drivers + named patterns */}
+            {brief?.drivers && <DriversSection drivers={brief.drivers} onExplore={(q) => ask(q)} />}
+            {!!brief?.patterns?.length && <PatternsSection patterns={brief.patterns} onExplore={(q) => ask(q)} />}
 
             {/* SECTION C — today's priorities */}
             <section className="rounded-xl border border-[#E5E7EB] bg-white px-6 py-5">
