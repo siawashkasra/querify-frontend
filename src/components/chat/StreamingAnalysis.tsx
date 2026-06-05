@@ -2,8 +2,9 @@
 
 // Progressive analytical answer — written piece by piece as the §B depth
 // engine's sub-queries complete (plan → primary chart → supporting findings →
-// synthesized conclusion). Each section fades/types in as its event arrives;
-// nothing blocks on the slowest sub-query.
+// synthesized conclusion). §4 APPEND-ONLY: every section has a stable key and
+// is upgraded IN PLACE; nothing already rendered is ever removed or redrawn —
+// the component keeps rendering after `done`, so there is no swap/flicker.
 
 import { useEffect, useState } from "react"
 import { Check, Loader2 } from "lucide-react"
@@ -11,8 +12,10 @@ import { cn } from "@/lib/cn"
 import { formatByField } from "@/lib/formatNumber"
 import QueryChart from "./QueryChart"
 import ResultCard from "./ResultCard"
+import ResultFooter from "./ResultFooter"
+import SQLDisclosure from "./SQLDisclosure"
 import type { StreamFinding, StreamPlan } from "@/store/chatStore"
-import type { QueryResult } from "@/types"
+import type { QueryResult, ResponseBlock } from "@/types"
 
 function toRowObjects(columns: string[], rows: unknown[]): Record<string, unknown>[] {
   return rows.map((r) => {
@@ -106,27 +109,37 @@ interface StreamingAnalysisProps {
   stage?: string
   prompt?: string
   connectionName?: string
+  result?: QueryResult          // the final answer — sections upgrade in place
+  loading?: boolean
+  onSuggestedQuestion?: (q: string) => void
 }
 
-export const StreamingAnalysis = ({ plan, findings = [], partial, stage, prompt, connectionName }: StreamingAnalysisProps) => {
+export const StreamingAnalysis = ({ plan, findings = [], partial, stage, prompt, connectionName, result, loading = true, onSuggestedQuestion }: StreamingAnalysisProps) => {
+  const done = !!result && !loading
   const doneIndexes = new Set(findings.map((f) => f.index))
   const supporting = [...findings].sort((a, b) => a.index - b.index).filter((f) => f.role !== "direct")
   const hasPrimary = !!partial && Array.isArray(partial.rows) && partial.rows.length > 0
-  const synthesizing = !!plan && doneIndexes.size >= (plan.sub_questions?.length ?? 0) && !partial?.headline
+  // synthesis content: the streamed partial stays once set (stable typewriter
+  // text); the final result only ADDS what streaming didn't carry
+  const headline = partial?.headline || result?.headline || ""
+  const insights = (partial?.insights?.length ? partial.insights : result?.insights) ?? []
+  const followUps = result?.follow_ups ?? partial?.follow_ups ?? []
+  const finalBlocks = (result?.blocks ?? []) as ResponseBlock[]
+  const synthesizing = !done && !!plan && doneIndexes.size >= (plan.sub_questions?.length ?? 0) && !headline
 
   return (
-    <div data-testid="streaming-analysis" className="bg-white border border-[var(--border)] rounded-2xl shadow-sm px-6 py-5 flex flex-col gap-4">
+    <div data-testid="streaming-analysis" className="bg-white border border-[var(--border)] rounded-2xl shadow-sm px-7 py-6 flex flex-col gap-5">
       {/* 1 — the plan, ticked off as each sub-query lands */}
       {plan && (
         <div className="flex flex-col gap-1.5 animate-fade-slide-in">
-          {plan.summary && <p className="text-xs text-[var(--text-muted)]">{plan.summary}</p>}
+          {plan.summary && <p className="text-xs leading-relaxed text-[var(--text-muted)]">{plan.summary}</p>}
           <ul className="flex flex-col gap-1">
             {plan.sub_questions.map((sq, i) => (
               <li key={i} className="flex items-center gap-2 text-xs animate-fade-slide-in" style={{ animationDelay: `${i * 80}ms` }}>
-                {doneIndexes.has(i)
-                  ? <Check size={12} className="text-emerald-500 shrink-0" />
+                {(done || doneIndexes.has(i))
+                  ? <Check size={12} className="text-success shrink-0" />
                   : <Loader2 size={12} className="text-brand animate-spin shrink-0" />}
-                <span className={cn("truncate", doneIndexes.has(i) ? "text-[var(--text-dim)]" : "text-[var(--text-muted)]")}>
+                <span className={cn("truncate", (done || doneIndexes.has(i)) ? "text-[var(--text-dim)]" : "text-[var(--text-muted)]")}>
                   {sq.question}
                 </span>
                 <span className="ml-auto shrink-0 text-[10px] uppercase tracking-wider text-[var(--text-muted)]">
@@ -169,23 +182,73 @@ export const StreamingAnalysis = ({ plan, findings = [], partial, stage, prompt,
         </div>
       )}
 
-      {/* 4 — the synthesized conclusion, written in last */}
-      {partial?.headline && (
-        <div className="flex flex-col gap-2 animate-fade-slide-in border-t border-[var(--border)] pt-3">
-          <p className="text-sm font-semibold text-[var(--text)] leading-relaxed">
-            <TypewriterText text={partial.headline} />
+      {/* 4 — the synthesized conclusion, written in last (upgrades in place) */}
+      {headline && (
+        <div key="synthesis" className="flex flex-col gap-2.5 animate-fade-slide-in border-t border-[var(--border)] pt-4">
+          <p className="text-[15px] font-semibold text-[var(--text)] leading-[1.65]">
+            <TypewriterText text={headline} />
           </p>
-          {(partial.insights ?? []).map((ins, i) => (
-            <p key={i} className="text-sm text-[var(--text-dim)] leading-relaxed animate-fade-slide-in" style={{ animationDelay: `${300 + i * 200}ms` }}>
+          {insights.map((ins, i) => (
+            <p key={`ins-${i}`} className="text-sm text-[var(--text-dim)] leading-relaxed animate-fade-slide-in" style={{ animationDelay: `${300 + i * 200}ms` }}>
               {ins}
             </p>
           ))}
+          {/* the why/implication prose + caveats APPEND once the final blocks land */}
+          {finalBlocks.map((b, i) => {
+            if (b.type === "narrative_block") {
+              return (
+                <div key={`nar-${b.heading ?? i}`} className="flex flex-col gap-1 animate-fade-slide-in">
+                  {b.heading && <h4 className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] mt-1">{b.heading}</h4>}
+                  {b.text.split("\n").filter(Boolean).map((line, j) => (
+                    <p key={j} className="text-sm leading-[1.7] text-[var(--text-dim)]">{line}</p>
+                  ))}
+                </div>
+              )
+            }
+            if (b.type === "caveat_block") {
+              return (
+                <div key="caveats" className="flex flex-col gap-1 animate-fade-slide-in">
+                  {b.caveats.map((c, j) => (
+                    <p key={j} className="text-[11px] text-[var(--text-muted)]">⚠ {c}</p>
+                  ))}
+                </div>
+              )
+            }
+            return null
+          })}
         </div>
       )}
 
-      {/* live stage line */}
-      {!partial?.headline && (
-        <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
+      {/* 5 — follow-up chips + footer, appended when the answer completes */}
+      {done && followUps.length > 0 && (
+        <div key="followups" className="flex flex-wrap gap-2 animate-fade-slide-in">
+          {followUps.slice(0, 3).map((q, i) => (
+            <button key={i} onClick={() => onSuggestedQuestion?.(q)}
+              className="rounded-full border border-[var(--border)] bg-[var(--surface-2)] px-3.5 py-1.5 text-xs text-[var(--text-dim)] transition-all hover:border-brand hover:text-brand">
+              {q}
+            </button>
+          ))}
+        </div>
+      )}
+      {done && result && (
+        <div key="footer" className="flex flex-col gap-2 pt-1 animate-fade-slide-in">
+          {result.sql && <SQLDisclosure sql={result.sql} />}
+          <ResultFooter
+            messageId={result.message_id}
+            executionMs={result.execution_ms}
+            totalMs={result.total_ms}
+            modelUsed={result.model_used}
+            initialFeedback={result.feedback_score}
+            confidenceLevel={result.confidence_level ?? null}
+            confidenceFactors={result.confidence_factors ?? []}
+            confidenceCaveats={result.confidence_caveats ?? []}
+          />
+        </div>
+      )}
+
+      {/* live stage line — replaced IN PLACE by the synthesis above */}
+      {!done && !headline && (
+        <div key="stageline" className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
           <span className="h-1.5 w-1.5 rounded-full bg-brand animate-pulse" />
           {synthesizing ? "Synthesizing the answer…" : stage || "Analysing…"}
         </div>

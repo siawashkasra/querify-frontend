@@ -21,14 +21,15 @@
   --color-border: #e2e8f0;
   --color-border-2: #cbd5e1;
 
-  --color-success: #10b981;
-  --color-success-bg: #d1fae5;
+  /* §7 — semantic colours are desaturated: informative, never an alarm wall */
+  --color-success: #15803d;
+  --color-success-bg: #f0fdf4;
 
-  --color-warning: #f59e0b;
-  --color-warning-bg: #fef3c7;
+  --color-warning: #b45309;
+  --color-warning-bg: #fffbeb;
 
-  --color-danger: #ef4444;
-  --color-danger-bg: #fee2e2;
+  --color-danger: #b91c1c;
+  --color-danger-bg: #fef2f2;
 
   --radius-sm: 4px;
   --radius: 6px;
@@ -59,8 +60,8 @@ body {
 }
 
 ::selection {
-  background-color: var(--brand);
-  color: #ffffff;
+  background-color: var(--brand-light);
+  color: var(--text);
 }
 
 ::-webkit-scrollbar {
@@ -73,17 +74,17 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--brand);
+  background: var(--color-border-2, #cbd5e1);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #8b5cf6;
+  background: #94a3b8;
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--brand) var(--surface);
+  scrollbar-color: #cbd5e1 var(--surface);
 }
 
 @keyframes fadeSlideIn {

@@ -44,8 +44,17 @@ function pickDateFormat(values: string[]): string {
 }
 
 function toNum(v: unknown): number | null {
-  const n = Number(v)
+  if (typeof v === "number") return Number.isFinite(v) ? v : null
+  if (v == null || typeof v === "boolean") return null
+  // serialized Decimals / formatted strings: strip currency, commas, %, spaces
+  const n = Number(String(v).replace(/[$€£¥₹,%\s]/g, ""))
   return Number.isFinite(n) ? n : null
+}
+
+// §4 — human labels only: internal column names (prev_total_sales_orders)
+// never reach titles, legends or tooltips.
+function humanize(field: string): string {
+  return String(field || "").replace(/_/g, " ").trim()
 }
 
 interface QueryChartProps {
@@ -68,16 +77,23 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
   const yPrimary = yFields[0] || ""
   const scheme = config.color_scheme || "brand"
 
-  const data = useMemo(() => {
+  const { data, xTicks } = useMemo(() => {
     const isDate = !!x && isDateCol(x)
     const rawX = isDate ? rows.map((r) => String(r[x] ?? "")).filter(Boolean) : []
     const dateFmt = isDate ? pickDateFormat(rawX) : ""
+    // ratio-style percent series (0.124) render as 12.4 on a 0-100 axis
+    const pctFields = new Set(yFields.filter((yf) => {
+      if (!isPercentField(yf)) return false
+      const vals = rows.map((r) => toNum(r[yf])).filter((n): n is number => n !== null)
+      return vals.length > 0 && vals.every((v) => Math.abs(v) <= 1.5)
+    }))
     let prepared = rows.map((row) => {
       const out: Record<string, unknown> = {}
       if (x) {
         const xRaw = row[x]
         if (isDate && typeof xRaw === "string") {
           const parsed = parseISO(xRaw)
+          out._t = isValid(parsed) ? parsed.getTime() : Number.MAX_SAFE_INTEGER
           out[x] = isValid(parsed) ? formatDate(parsed, dateFmt) : String(xRaw)
         } else {
           out[x] = xRaw == null ? "" : typeof xRaw === "object" ? formatUnknownForUi(xRaw) : String(xRaw)
@@ -85,15 +101,29 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
       }
       for (const yf of yFields) {
         const n = toNum(row[yf])
-        out[yf] = n === null ? row[yf] : n
+        out[yf] = n === null ? row[yf] : pctFields.has(yf) ? n * 100 : n
       }
       return out
     })
+    if (isDate) {
+      // §4 — time axes always sort chronologically
+      prepared = [...prepared].sort((a, b) => (a._t as number) - (b._t as number))
+    }
     if (config.sort_order && yPrimary) {
       const dir = config.sort_order === "asc" ? 1 : -1
       prepared = [...prepared].sort((a, b) => ((toNum(a[yPrimary]) ?? 0) - (toNum(b[yPrimary]) ?? 0)) * dir)
     }
-    return prepared
+    // §4 — de-duplicated tick labels (several days can share one "Jun 2026")
+    let ticks: string[] | undefined
+    if (isDate && x) {
+      const seen = new Set<string>()
+      ticks = []
+      for (const d of prepared) {
+        const label = String(d[x])
+        if (!seen.has(label)) { seen.add(label); ticks.push(label) }
+      }
+    }
+    return { data: prepared, xTicks: ticks }
   }, [rows, x, yFields, yPrimary, config.sort_order])
 
   const emphasis = useMemo(() => new Set(config.emphasis_points ?? []), [config.emphasis_points])
@@ -123,6 +153,7 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
               return (
                 <p key={i} className="font-mono text-sm font-semibold text-[var(--text)] flex items-center gap-1.5">
                   {yFields.length > 1 && <span className="inline-block h-2 w-2 rounded-full" style={{ background: CATEGORICAL[i % CATEGORICAL.length] }} />}
+                  {yFields.length > 1 && <span className="font-sans font-normal text-[11px] text-[var(--text-muted)]">{humanize(field)}</span>}
                   {formatByField(p.value, field, { compact: false })}
                 </p>
               )
@@ -133,16 +164,20 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
     />
   )
 
+  const yIsPercent = isPercentField(yPrimary)
   const grid = <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
   const xAxis = (
     <XAxis dataKey={x} tick={{ fill: "var(--text-muted)", fontFamily: "IBM Plex Mono", fontSize: 11 }}
       tickLine={false} axisLine={{ stroke: "var(--border)" }} interval="preserveStartEnd"
+      ticks={xTicks}
       angle={data.length > 8 ? -35 : 0} textAnchor={data.length > 8 ? "end" : "middle"} height={data.length > 8 ? 56 : 30}
       tickFormatter={(v: unknown) => truncate(String(v), 12)} />
   )
   const yAxis = (
     <YAxis tick={{ fill: "var(--text-muted)", fontFamily: "IBM Plex Mono", fontSize: 11 }} tickLine={false}
-      axisLine={false} width={60} tickFormatter={(v: unknown) => formatAxis(v, yPrimary)} />
+      axisLine={false} width={60}
+      domain={yIsPercent ? [0, 100] : [0, "auto"]}
+      tickFormatter={(v: unknown) => yIsPercent ? `${v}%` : formatAxis(v, yPrimary)} />
   )
 
   if (!rows.length || (config.type !== "gauge" && data.length < 1)) {
@@ -160,7 +195,7 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
           {!isSpark && grid}{!isSpark && xAxis}{!isSpark && yAxis}{!isSpark && TooltipEl}
           {yFields.length > 1 && !isSpark && <Legend wrapperStyle={{ fontSize: 11 }} />}
           {yFields.map((yf, i) => (
-            <Line key={yf} dataKey={yf} stroke={i === 0 ? BRAND : CATEGORICAL[i % CATEGORICAL.length]} strokeWidth={2}
+            <Line key={yf} dataKey={yf} name={humanize(yf)} stroke={i === 0 ? BRAND : CATEGORICAL[i % CATEGORICAL.length]} strokeWidth={2}
               dot={false} type="monotone" isAnimationActive={mounted} activeDot={isSpark ? false : { r: 4, fill: BRAND }} />
           ))}
           {config.dashed_from != null && (
@@ -182,7 +217,7 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
             </linearGradient>
           </defs>
           {grid}{xAxis}{yAxis}{TooltipEl}
-          <Area dataKey={yPrimary} stroke={BRAND} strokeWidth={2} fill="url(#brandGrad)" type="monotone" dot={false} isAnimationActive={mounted} activeDot={{ r: 4, fill: BRAND }} />
+          <Area dataKey={yPrimary} name={humanize(yPrimary)} stroke={BRAND} strokeWidth={2} fill="url(#brandGrad)" type="monotone" dot={false} isAnimationActive={mounted} activeDot={{ r: 4, fill: BRAND }} />
         </AreaChart>
       </ResponsiveContainer>
     )
@@ -199,7 +234,7 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
             </>
           ) : (<>{xAxis}{yAxis}</>)}
           {TooltipEl}
-          <Bar dataKey={yPrimary} radius={horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} isAnimationActive={mounted}>
+          <Bar dataKey={yPrimary} name={humanize(yPrimary)} radius={horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} isAnimationActive={mounted}>
             {data.map((d, i) => <Cell key={i} fill={barFill(i, d[yPrimary])} />)}
           </Bar>
         </BarChart>
@@ -217,7 +252,7 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
           {TooltipEl}
           <Legend wrapperStyle={{ fontSize: 11 }} />
           {yFields.map((yf, i) => (
-            <Bar key={yf} dataKey={yf} stackId={stackId} fill={CATEGORICAL[i % CATEGORICAL.length]} radius={stackId ? 0 : [4, 4, 0, 0]} isAnimationActive={mounted} />
+            <Bar key={yf} dataKey={yf} name={humanize(yf)} stackId={stackId} fill={CATEGORICAL[i % CATEGORICAL.length]} radius={stackId ? 0 : [4, 4, 0, 0]} isAnimationActive={mounted} />
           ))}
         </BarChart>
       </ResponsiveContainer>
@@ -241,8 +276,8 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <ScatterChart>
           {grid}
-          <XAxis type="number" dataKey={x} name={x} tick={{ fill: "var(--text-muted)", fontSize: 11 }} tickLine={false} axisLine={{ stroke: "var(--border)" }} tickFormatter={(v: unknown) => formatAxis(v, x)} />
-          <YAxis type="number" dataKey={yScatter} name={yScatter} tick={{ fill: "var(--text-muted)", fontSize: 11 }} tickLine={false} axisLine={false} width={60} tickFormatter={(v: unknown) => formatAxis(v, yScatter)} />
+          <XAxis type="number" dataKey={x} name={humanize(x)} tick={{ fill: "var(--text-muted)", fontSize: 11 }} tickLine={false} axisLine={{ stroke: "var(--border)" }} tickFormatter={(v: unknown) => formatAxis(v, x)} />
+          <YAxis type="number" dataKey={yScatter} name={humanize(yScatter)} tick={{ fill: "var(--text-muted)", fontSize: 11 }} tickLine={false} axisLine={false} width={60} tickFormatter={(v: unknown) => formatAxis(v, yScatter)} />
           <ZAxis range={[40, 40]} />
           {TooltipEl}
           <Scatter data={data} fill={BRAND} isAnimationActive={mounted} />
@@ -303,8 +338,8 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
         <ComposedChart data={data}>
           {grid}{xAxis}{yAxis}{TooltipEl}
           <Legend wrapperStyle={{ fontSize: 11 }} />
-          <Bar dataKey={barField} fill={BRAND_DARK} radius={[4, 4, 0, 0]} isAnimationActive={mounted} />
-          {lineField !== barField && <Line dataKey={lineField} stroke={CATEGORICAL[1]} strokeWidth={2} dot={false} type="monotone" isAnimationActive={mounted} />}
+          <Bar dataKey={barField} name={humanize(barField)} fill={BRAND_DARK} radius={[4, 4, 0, 0]} isAnimationActive={mounted} />
+          {lineField !== barField && <Line dataKey={lineField} name={humanize(lineField)} stroke={CATEGORICAL[1]} strokeWidth={2} dot={false} type="monotone" isAnimationActive={mounted} />}
         </ComposedChart>
       </ResponsiveContainer>
     )
@@ -314,7 +349,7 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
 
   return (
     <div className="flex flex-col gap-1.5 transition-opacity duration-300" style={{ opacity: mounted ? 1 : 0 }}>
-      {config.title && t !== "sparkline" && <p className="text-sm text-[var(--text-dim)]">{config.title}</p>}
+      {config.title && t !== "sparkline" && <p className="text-sm text-[var(--text-dim)]">{humanize(config.title)}</p>}
       {chart}
     </div>
   )

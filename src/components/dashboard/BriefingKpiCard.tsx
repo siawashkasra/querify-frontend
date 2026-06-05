@@ -12,8 +12,8 @@ import type { BriefingKpiData } from "@/types"
 const ICONS: Record<string, typeof DollarSign> = {
   revenue: DollarSign, cash: Banknote, pipeline: Briefcase, risk: AlertTriangle, count: Hash,
 }
-const GOOD = "#16a34a"
-const BAD = "#dc2626"
+const GOOD = "#15803d"   // matches --color-success
+const BAD = "#b91c1c"    // matches --color-danger
 
 export default function BriefingKpiCard({ kpi, onExplore }: { kpi: BriefingKpiData; onExplore?: (q: string) => void }) {
   const Icon = ICONS[kpi.icon_hint] ?? Hash
@@ -29,35 +29,35 @@ export default function BriefingKpiCard({ kpi, onExplore }: { kpi: BriefingKpiDa
       onClick={() => onExplore?.(exploreQuestion)}
       disabled={!onExplore}
       className={cn(
-        "group flex flex-col gap-2 rounded-xl border border-[#E5E7EB] bg-white p-4 min-h-[160px] text-left",
+        "group flex flex-col gap-2 rounded-xl border border-[var(--border)] bg-white p-4 min-h-[160px] text-left",
         onExplore && "transition-all hover:border-brand/40 hover:shadow-sm cursor-pointer",
       )}
     >
-      <div className="flex items-center gap-1.5 text-[#6B7280] w-full">
+      <div className="flex items-center gap-1.5 text-[var(--text-muted)] w-full">
         <Icon size={13} />
         <span className="text-[11px] font-semibold uppercase tracking-wider truncate">{kpi.label}</span>
         {onExplore && <ArrowUpRight size={12} className="ml-auto opacity-0 group-hover:opacity-100 text-brand transition-opacity" />}
       </div>
 
       {unavailable ? (
-        <div className="flex flex-1 items-center text-sm text-[#9CA3AF]">Unavailable</div>
+        <div className="flex flex-1 items-center text-sm text-[var(--text-muted)]">Unavailable</div>
       ) : (
         <>
-          <span className="font-mono text-[26px] font-semibold leading-tight text-[#111827]">{kpi.formatted}</span>
+          <span className="font-mono text-[26px] font-semibold leading-tight text-[var(--text)]">{kpi.formatted}</span>
 
           {kpi.delta_pct != null ? (
             <div className={cn("flex items-center gap-1 text-xs font-medium",
-              tone === "good" && "text-emerald-600", tone === "bad" && "text-red-600", tone === "neutral" && "text-[#9CA3AF]")}>
+              tone === "good" && "text-success", tone === "bad" && "text-danger", tone === "neutral" && "text-[var(--text-muted)]")}>
               <Arrow size={12} />
               <span>{kpi.delta_pct > 0 ? "+" : ""}{kpi.delta_pct}%</span>
-              <span className="font-normal text-[#9CA3AF]">vs previous</span>
+              <span className="font-normal text-[var(--text-muted)]">vs previous</span>
             </div>
           ) : (
-            <div className="text-xs text-[#9CA3AF]">No prior period</div>
+            <div className="text-xs text-[var(--text-muted)]">No prior period</div>
           )}
 
           {kpi.trend && kpi.trend.direction !== "flat" && (
-            <p className="text-[11px] text-[#6B7280]">{kpi.trend.label}</p>
+            <p className="text-[11px] text-[var(--text-muted)]">{kpi.trend.label}</p>
           )}
 
           {kpi.sparkline?.length >= 2 && (
@@ -65,7 +65,7 @@ export default function BriefingKpiCard({ kpi, onExplore }: { kpi: BriefingKpiDa
               <Sparkline points={kpi.sparkline} color={sparkColor} width={180} height={32} />
             </div>
           )}
-          {kpi.caption && <p className="text-[11px] text-[#9CA3AF] truncate">{kpi.caption}</p>}
+          {kpi.caption && <p className="text-[11px] text-[var(--text-muted)] truncate">{kpi.caption}</p>}
         </>
       )}
     </button>

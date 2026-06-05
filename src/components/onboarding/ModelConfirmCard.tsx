@@ -109,8 +109,8 @@ export const ModelConfirmCard = ({ connectionId, onConfirmed, onSkip }: ModelCon
         )}
 
         {ack && (
-          <p className="flex items-start gap-2 rounded-lg border-l-[3px] border-emerald-500 bg-emerald-500/[0.06] px-3.5 py-3 text-sm text-[var(--text-dim)] animate-fade-slide-in">
-            <Check size={15} className="mt-0.5 shrink-0 text-emerald-600" /> {ack}
+          <p className="flex items-start gap-2 rounded-lg border-l-[3px] border-success bg-success-bg px-3.5 py-3 text-sm text-[var(--text-dim)] animate-fade-slide-in">
+            <Check size={15} className="mt-0.5 shrink-0 text-success" /> {ack}
           </p>
         )}
 

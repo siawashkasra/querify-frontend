@@ -540,6 +540,28 @@ export interface BriefingDrivers {
   text: string
 }
 
+export interface BriefingForecastPoint {
+  period: string
+  value: number
+  lo: number
+  hi: number
+  formatted?: string
+  formatted_range?: string
+}
+
+export interface BriefingForecast {
+  measure: string
+  format: string
+  currency?: string | null
+  ok: boolean
+  method: string
+  confidence: "low" | "medium"
+  caveats: string[]
+  flagged_reason?: string | null
+  history: { period: string; value: number }[]
+  points: BriefingForecastPoint[]
+}
+
 export interface BriefingPattern {
   type: string
   headline: string
@@ -567,6 +589,7 @@ export interface BriefingData {
   priorities: BriefingPriority[]
   drivers: BriefingDrivers | null
   patterns: BriefingPattern[]
+  forecast: BriefingForecast | null
   resolved_at: string | null
   cached: boolean
 }

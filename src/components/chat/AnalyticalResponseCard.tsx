@@ -70,7 +70,7 @@ function TrendSection({ content }: { content: string }) {
 
 function WatchSection({ content }: { content: string }) {
   return (
-    <div className="border-l-2 border-amber-400 pl-3 flex flex-col gap-1">
+    <div className="border-l-2 border-warning pl-3 flex flex-col gap-1">
       {content.split("\n").filter(Boolean).map((line, i) => (
         <p key={i} className="text-sm text-[var(--text-dim)] leading-relaxed">{line.replace(/^[-*]\s*/, "")}</p>
       ))}

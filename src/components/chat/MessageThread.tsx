@@ -77,15 +77,17 @@ export const MessageThread = ({
           const partial = msg.partial
           const hasPartial = !!partial && Array.isArray(partial.rows) && partial.rows.length > 0
           // Analytical streaming: a plan or findings have arrived — the answer
-          // writes itself in progressively, section by section.
+          // writes itself in progressively, section by section. §4: the SAME
+          // component keeps rendering after `done` (result passed in), so the
+          // answer upgrades in place — never the swap/flicker.
           const isStreamingAnalysis = !!msg.plan || (msg.findings?.length ?? 0) > 0
 
           return (
             <div key={msg.id} className="flex flex-col gap-4">
               {msg.loading && !hasPartial && !isStreamingAnalysis && <TypingIndicator stage={msg.stage} />}
               {/* Progressive analytical answer: plan → primary chart →
-                  supporting findings → synthesized conclusion. */}
-              {msg.loading && isStreamingAnalysis && (
+                  supporting findings → synthesis → footer, append-only. */}
+              {isStreamingAnalysis && !msg.error && !msg.errorType && (
                 <StreamingAnalysis
                   plan={msg.plan}
                   findings={msg.findings}
@@ -93,6 +95,9 @@ export const MessageThread = ({
                   stage={msg.stage}
                   prompt={prevUserMsg?.prompt}
                   connectionName={connectionName}
+                  result={msg.result}
+                  loading={!!msg.loading}
+                  onSuggestedQuestion={onSuggestedQuestion}
                 />
               )}
               {/* Stage 1 (single-shot path) — the answer (chart/number) appears
@@ -117,7 +122,7 @@ export const MessageThread = ({
                   onRephrase={onFollowUp}
                 />
               )}
-              {!msg.loading && !msg.error && !msg.errorType && msg.result && (
+              {!msg.loading && !msg.error && !msg.errorType && msg.result && !isStreamingAnalysis && (
                 <div className="bg-white border border-[var(--border)] rounded-2xl shadow-sm px-6 py-5">
                   {/* The synthesized analytical answer renders as composed
                       blocks (headline → KPIs → charts → why → follow-ups);

@@ -45,13 +45,38 @@ export function formatNumber(value: unknown, opts: { compact?: boolean } = {}): 
   return n.toLocaleString("en-US", { maximumFractionDigits: 2 })
 }
 
-export function formatCurrency(value: unknown, opts: { compact?: boolean } = { compact: true }): string {
+// Currency symbols come from the browser's built-in CLDR (Intl) — ANY ISO 4217
+// code works, nothing hardcoded. A code without a distinct symbol renders as a
+// labelled prefix ("AFN 1.2M") — never a misleading '$'.
+const _symbolCache = new Map<string, string>()
+
+export function currencySymbol(code?: string | null): string {
+  if (!code) return "$"
+  const c = code.trim().toUpperCase()
+  const cached = _symbolCache.get(c)
+  if (cached !== undefined) return cached
+  let result = `${c} `
+  try {
+    const parts = new Intl.NumberFormat("en", {
+      style: "currency", currency: c, currencyDisplay: "narrowSymbol",
+    }).formatToParts(1)
+    const sym = parts.find((p) => p.type === "currency")?.value
+    if (sym && sym.toUpperCase() !== c) {
+      result = /[A-Za-z]$/.test(sym) ? `${sym} ` : sym
+    }
+  } catch { /* unknown code → labelled prefix */ }
+  _symbolCache.set(c, result)
+  return result
+}
+
+export function formatCurrency(value: unknown, opts: { compact?: boolean; code?: string | null } = { compact: true }): string {
   const n = toNumber(value)
   if (n === null) return String(value ?? "")
+  const sym = currencySymbol(opts.code)
   const sign = n < 0 ? "-" : ""
   const a = Math.abs(n)
-  if (opts.compact && a >= 1000) return `${sign}$${compact(a)}`
-  return `${sign}$${a.toLocaleString("en-US", { maximumFractionDigits: a === Math.round(a) ? 0 : 2 })}`
+  if (opts.compact && a >= 1000) return `${sign}${sym}${compact(a)}`
+  return `${sign}${sym}${a.toLocaleString("en-US", { maximumFractionDigits: a === Math.round(a) ? 0 : 2 })}`
 }
 
 export function formatPercent(value: unknown): string {
@@ -62,9 +87,9 @@ export function formatPercent(value: unknown): string {
 }
 
 // Format a value, inferring currency/percent from the column name.
-export function formatByField(value: unknown, field?: string | null, opts: { compact?: boolean } = {}): string {
+export function formatByField(value: unknown, field?: string | null, opts: { compact?: boolean; currency?: string | null } = {}): string {
   if (value == null) return "—"
-  if (isCurrencyField(field)) return formatCurrency(value, { compact: opts.compact ?? true })
+  if (isCurrencyField(field)) return formatCurrency(value, { compact: opts.compact ?? true, code: opts.currency })
   if (isPercentField(field)) return formatPercent(value)
   const n = toNumber(value)
   if (n === null) return String(value)
@@ -72,8 +97,8 @@ export function formatByField(value: unknown, field?: string | null, opts: { com
 }
 
 // Axis tick formatter — always compact so axes never crowd.
-export function formatAxis(value: unknown, field?: string | null): string {
-  if (isCurrencyField(field)) return formatCurrency(value, { compact: true })
+export function formatAxis(value: unknown, field?: string | null, currency?: string | null): string {
+  if (isCurrencyField(field)) return formatCurrency(value, { compact: true, code: currency })
   if (isPercentField(field)) return formatPercent(value)
   return formatNumber(value, { compact: true })
 }

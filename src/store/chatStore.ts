@@ -102,9 +102,14 @@ export const useChatStore = create<ChatState>((set) => ({
     set((s) => ({
       threads: {
         ...s.threads,
-        [sessionId]: (s.threads[sessionId] ?? []).map((m) =>
-          m.id === tempId ? { ...m, loading: false, stage: undefined, partial: undefined, plan: undefined, findings: undefined, result } : m
-        ),
+        [sessionId]: (s.threads[sessionId] ?? []).map((m) => {
+          if (m.id !== tempId) return m
+          // §4 append-only streaming: an analytical answer (plan present)
+          // KEEPS its streamed plan/findings/partial so the rendered blocks
+          // upgrade IN PLACE — nothing already on screen is removed or redrawn.
+          if (m.plan) return { ...m, loading: false, stage: undefined, result }
+          return { ...m, loading: false, stage: undefined, partial: undefined, plan: undefined, findings: undefined, result }
+        }),
       },
     }))
   },
