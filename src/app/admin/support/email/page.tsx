@@ -1,5 +1,6 @@
 "use client"
 
+import DOMPurify from "dompurify"
 import { useState, useRef, useCallback, useEffect } from "react"
 import { useMutation } from "@tanstack/react-query"
 import {
@@ -9,6 +10,13 @@ import {
 import { adminApi } from "@/lib/adminApi"
 import type { EmailSendRequest } from "@/lib/adminApi"
 import { cn } from "@/lib/cn"
+
+// ── Sanitize helper (DOMPurify, SSR-safe) ─────────────────────────────────────
+
+function sanitize(html: string): string {
+  if (typeof window === "undefined") return ""  // SSR guard — no DOM available
+  return DOMPurify.sanitize(html, { USE_PROFILES: { html: true } })
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -211,7 +219,7 @@ function RichTextEditor({
         onInput={() => {
           if (editorRef.current) onChange(editorRef.current.innerHTML)
         }}
-        dangerouslySetInnerHTML={{ __html: value }}
+        dangerouslySetInnerHTML={{ __html: sanitize(value) }}
         className={cn(
           "min-h-[200px] p-4 text-sm text-gray-800 focus:outline-none",
           "prose prose-sm max-w-none",
@@ -352,7 +360,7 @@ export default function EmailSenderPage() {
               {bodyHtml ? (
                 <div
                   className="prose prose-sm max-w-none text-gray-800 [&_a]:text-violet-600 [&_ul]:list-disc [&_ul]:ml-4"
-                  dangerouslySetInnerHTML={{ __html: bodyHtml }}
+                  dangerouslySetInnerHTML={{ __html: sanitize(bodyHtml) }}
                 />
               ) : (
                 <p className="text-sm text-gray-300 italic">No body yet.</p>
