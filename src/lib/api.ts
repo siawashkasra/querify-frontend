@@ -342,6 +342,8 @@ export const connections = {
   getContext: (id: string) => get<Record<string, unknown>>(`/api/v1/connections/${id}/context`),
   pipelineStatus: (id: string) =>
     get<PipelineStatus>(`/api/v1/connections/${id}/pipeline-status`),
+  retryPipeline: (id: string) =>
+    post<PipelineStatus>(`/api/v1/connections/${id}/pipeline/retry`, {}),
   modelSummary: (id: string) =>
     get<ModelSummary>(`/api/v1/connections/${id}/model`),
   confirmModel: (id: string, correction?: string) =>

@@ -142,14 +142,27 @@ export const InsightsReveal = ({ connectionId, databaseName, revealStartMs }: In
 interface FallbackStateProps {
   connectionId: string
   reason: string
+  onRetry?: () => void
 }
 
-export const FallbackState = ({ connectionId, reason }: FallbackStateProps) => {
+export const FallbackState = ({ connectionId, reason, onRetry }: FallbackStateProps) => {
   const router = useRouter()
+  const [retrying, setRetrying] = useState(false)
 
   useEffect(() => {
     track("onboarding_fallback_shown", { reason })
   }, [reason])
+
+  const handleRetry = async () => {
+    setRetrying(true)
+    try {
+      await connections.retryPipeline(connectionId)
+      track("onboarding_pipeline_retried", { connection_id: connectionId })
+      onRetry?.()
+    } catch {
+      setRetrying(false)
+    }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--bg)] px-6">
@@ -168,16 +181,32 @@ export const FallbackState = ({ connectionId, reason }: FallbackStateProps) => {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => {
-            track("onboarding_first_question_clicked", { connection_id: connectionId, via: "fallback" })
-            router.push("/chat/new")
-          }}
-          className="flex items-center gap-2 px-7 py-3.5 bg-[var(--brand)] text-white font-semibold rounded-lg hover:bg-[var(--brand-dark)] active:scale-95 transition-all text-sm"
-        >
-          Start asking questions
-          <ArrowRight size={16} />
-        </button>
+        <div className="flex flex-col items-center gap-3 w-full">
+          {onRetry && (
+            <button
+              onClick={handleRetry}
+              disabled={retrying}
+              className="flex items-center gap-2 px-7 py-3.5 bg-[var(--brand)] text-white font-semibold rounded-lg hover:bg-[var(--brand-dark)] active:scale-95 transition-all text-sm disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {retrying ? "Retrying…" : "Retry analysis"}
+            </button>
+          )}
+          <button
+            onClick={() => {
+              track("onboarding_first_question_clicked", { connection_id: connectionId, via: "fallback" })
+              router.push("/chat/new")
+            }}
+            className={cn(
+              "flex items-center gap-2 px-7 py-3.5 font-semibold rounded-lg active:scale-95 transition-all text-sm",
+              onRetry
+                ? "text-[var(--text-muted)] hover:text-[var(--text)]"
+                : "bg-[var(--brand)] text-white hover:bg-[var(--brand-dark)]"
+            )}
+          >
+            Start asking questions
+            <ArrowRight size={16} />
+          </button>
+        </div>
       </div>
     </div>
   )

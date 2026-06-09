@@ -5,6 +5,7 @@ import { Bell, X, AlertCircle, Info, ExternalLink } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { alerts as alertsApi, connections as connectionsApi } from "@/lib/api"
 import { INSIGHTS_ENABLED } from "@/lib/featureFlags"
+import { useAuthStore } from "@/store/authStore"
 import type { ConnectionAlert, AlertPriority, Connection } from "@/types"
 import { clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
@@ -51,10 +52,12 @@ export function NotificationPanel() {
   const [open, setOpen] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const qc = useQueryClient()
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
 
   const { data: allConnections = [] } = useQuery<Connection[]>({
     queryKey: ["connections"],
     queryFn: () => connectionsApi.list() as Promise<Connection[]>,
+    enabled: isAuthenticated,
   })
   const connectionIds = allConnections.map((c) => c.id)
 
@@ -64,7 +67,7 @@ export function NotificationPanel() {
       const results = await Promise.all(connectionIds.map((id) => alertsApi.unread(id)))
       return results.flat()
     },
-    enabled: connectionIds.length > 0,
+    enabled: isAuthenticated && connectionIds.length > 0,
     refetchInterval: 60_000,
   })
 

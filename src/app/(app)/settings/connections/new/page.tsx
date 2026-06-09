@@ -143,7 +143,13 @@ export default function NewConnectionPage() {
   }
 
   if (phase === "fallback" && savedId) {
-    return <FallbackState connectionId={savedId} reason={fallbackReason} />
+    return (
+      <FallbackState
+        connectionId={savedId}
+        reason={fallbackReason}
+        onRetry={() => setPhase("progress")}
+      />
+    )
   }
 
   return (
