@@ -108,6 +108,8 @@ export interface ChatSession {
   title: string | null
   created_at: string
   last_active_at: string
+  dominant_intent?: string | null
+  user_renamed?: boolean
 }
 
 export interface KPICard {

@@ -11,6 +11,13 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from "react"
 import { ArrowUp, Zap } from "lucide-react"
 import { cn } from "@/lib/cn"
+import { useAuthStore } from "@/store/authStore"
+
+function timeGreeting(firstName: string | null): string {
+  const h = new Date().getHours()
+  const salutation = h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening"
+  return firstName ? `${salutation}, ${firstName}.` : `${salutation}.`
+}
 
 const STARTER_CHIPS = [
   "What was revenue last month?",
@@ -33,6 +40,8 @@ export function Composer({ onSubmit, isLoading, hasContent, connectionName, rece
   const [value, setValue] = useState(initialValue ?? "")
   const ref = useRef<HTMLTextAreaElement>(null)
   const isDocked = hasContent || isLoading
+  const user = useAuthStore((s) => s.user)
+  const firstName = user?.name?.split(" ")[0] ?? null
 
   useEffect(() => {
     if (!isDocked) ref.current?.focus()
@@ -100,7 +109,7 @@ export function Composer({ onSubmit, isLoading, hasContent, connectionName, rece
         <div className="text-center">
           <div className="inline-flex items-center gap-2 mb-3">
             <Zap size={20} className="text-violet-500" />
-            <span className="text-xl font-semibold text-gray-900 dark:text-gray-100">Querify</span>
+            <span className="text-xl font-semibold text-gray-900 dark:text-gray-100">{timeGreeting(firstName)}</span>
           </div>
           <p className="text-gray-500 dark:text-gray-400 text-sm">
             Ask a question about{connectionName ? ` ${connectionName}` : " your data"}.

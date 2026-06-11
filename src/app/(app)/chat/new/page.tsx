@@ -2,8 +2,10 @@
 
 import { Suspense, useEffect, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { useQuery } from "@tanstack/react-query"
 import { useAppStore } from "@/store/appStore"
 import { query as queryApi } from "@/lib/api"
+import type { ChatSession } from "@/types"
 import { useChatStore } from "@/store/chatStore"
 import { useAbortController } from "@/hooks/useAbortController"
 import { runStreaming } from "@/lib/runStreaming"
@@ -38,6 +40,7 @@ function NewChatPage() {
     addMessageFinding,
     migrateThread,
     v2SectionStart,
+    v2CellStart,
     v2CellComplete,
     v2CellUpdate,
     v2Layout,
@@ -49,6 +52,12 @@ function NewChatPage() {
   const [loading, setLoading] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const autoSubmitDone = useRef(false)
+
+  const { data: recentSessions } = useQuery<ChatSession[]>({
+    queryKey: ["sessions", activeConnectionId],
+    queryFn: () => queryApi.sessions(activeConnectionId ?? undefined) as Promise<ChatSession[]>,
+    staleTime: 30_000,
+  })
 
   // Draft param — pre-fill composer (not auto-submitted)
   const draftParam = searchParams.get("draft") ?? undefined
@@ -79,7 +88,7 @@ function NewChatPage() {
         {
           setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding,
           resolveMessage, rejectMessage,
-          v2SectionStart, v2CellComplete, v2CellUpdate, v2Layout, v2AgentNote, v2SessionTitle, v2DocDone,
+          v2SectionStart, v2CellStart, v2CellComplete, v2CellUpdate, v2Layout, v2AgentNote, v2SessionTitle, v2DocDone,
         },
         resolvedSession, loadingId,
         { prompt, session_id: resolvedSession, connection_id: activeConnectionId },
@@ -123,6 +132,8 @@ function NewChatPage() {
           isLoading={loading}
           hasContent={hasMessages}
           initialValue={draftParam}
+          recentSessions={recentSessions?.slice(0, 3).map((s) => ({ id: s.id, title: s.title ?? "Untitled" }))}
+          onJumpBack={(id) => router.push(`/chat/${id}`)}
         />
       </div>
     </div>

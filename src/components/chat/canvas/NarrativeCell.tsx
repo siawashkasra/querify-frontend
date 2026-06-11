@@ -2,6 +2,27 @@
 
 import type { AnswerCell } from "@/types"
 
+// Bold numbers: $1.2M, -39.9%, 47k, plain integers/decimals.
+// Numbers stay plain text; frontend bolds them with font-mono for clarity.
+const NUMBER_RE = /(\$?-?[\d,]+\.?\d*[kKmMbB%]?%?|\d+\.\d+%?)/g
+
+function BoldNumbers({ text }: { text: string }) {
+  const parts = text.split(NUMBER_RE)
+  return (
+    <>
+      {parts.map((part, i) =>
+        NUMBER_RE.test(part) ? (
+          <strong key={i} className="font-semibold font-mono text-gray-900 dark:text-gray-100">
+            {part}
+          </strong>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </>
+  )
+}
+
 interface Props {
   cell: AnswerCell
 }
@@ -15,10 +36,14 @@ export function NarrativeCell({ cell }: Props) {
   if (!content.length) return null
 
   return (
-    <div className="mb-4 prose prose-sm dark:prose-invert max-w-none">
-      {heading && <p className="font-semibold text-gray-700 dark:text-gray-300 not-prose mb-1">{heading}</p>}
+    <div className="mb-4">
+      {heading && (
+        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1.5">{heading}</p>
+      )}
       {content.map((p, i) => (
-        <p key={i} className="text-gray-700 dark:text-gray-300 leading-relaxed">{p}</p>
+        <p key={i} className="text-[14px] leading-[1.75] text-gray-700 dark:text-gray-300 mb-2 last:mb-0">
+          <BoldNumbers text={p} />
+        </p>
       ))}
     </div>
   )

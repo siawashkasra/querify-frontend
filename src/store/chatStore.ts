@@ -23,6 +23,17 @@ export interface StreamFinding {
   error?: string | null
 }
 
+// ── Agent feed (drives companion panel "Ran: X" live rows) ────────────────────
+
+export type AgentFeedItem =
+  | { t: "question"; sectionId: string; text: string }
+  | { t: "note"; sectionId: string; text: string; kind: string }
+  | { t: "cell"; sectionId: string; cellId: string; name: string; kind: string; status: "running" | "complete" | "error" }
+  | { t: "layout"; sectionId: string }
+  | { t: "completion"; sectionId: string; text: string }
+
+// ── Thread message ────────────────────────────────────────────────────────────
+
 export interface ThreadMessage {
   id: string
   role: "user" | "assistant"
@@ -33,14 +44,14 @@ export interface ThreadMessage {
   errorDetail?: string | null
   retryPrompt?: string | null
   loading?: boolean
-  stage?: string                       // live pipeline stage text while streaming
-  partial?: Partial<QueryResult>       // Stage-1 (chart/number) before the analysis arrives
-  plan?: StreamPlan                    // the streamed analysis plan (analytical path)
-  findings?: StreamFinding[]           // sub-results, appended as each query completes
+  stage?: string
+  partial?: Partial<QueryResult>
+  plan?: StreamPlan
+  findings?: StreamFinding[]
   createdAt: Date
   // v2 document model
-  document?: AnswerDocument            // live document being built; sections grow as cells arrive
-  sessionTitle?: string                // updated live via session_title event
+  document?: AnswerDocument
+  sessionTitle?: string
 }
 
 export interface PanelMessage {
@@ -55,7 +66,9 @@ export interface PanelMessage {
 interface ChatState {
   threads: Record<string, ThreadMessage[]>
   panelMessages: Record<string, PanelMessage[]>
-  sessionTitles: Record<string, string>   // sessionId → live title
+  sessionTitles: Record<string, string>
+  agentFeeds: Record<string, AgentFeedItem[]>  // sessionId → live event feed for companion panel
+
   addUserMessage: (sessionId: string, prompt: string) => string
   addLoadingMessage: (sessionId: string) => string
   resolveMessage: (sessionId: string, tempId: string, result: QueryResult) => void
@@ -73,12 +86,13 @@ interface ChatState {
   rejectPanelMessage: (sessionId: string, tempId: string, error: string) => void
   // v2 document reducers
   v2SectionStart: (sessionId: string, tempId: string, sectionId: string, question: string) => void
+  v2CellStart: (sessionId: string, tempId: string, cellId: string, name: string, kind: string, sectionId: string) => void
   v2CellComplete: (sessionId: string, tempId: string, cell: AnswerCell) => void
   v2CellUpdate: (sessionId: string, tempId: string, cell: AnswerCell) => void
   v2Layout: (sessionId: string, tempId: string, sectionId: string, order: string[]) => void
   v2AgentNote: (sessionId: string, tempId: string, sectionId: string, note: AgentNote) => void
   v2SessionTitle: (sessionId: string, title: string) => void
-  v2DocDone: (sessionId: string, tempId: string, followUps: string[], completionText: string | null) => void
+  v2DocDone: (sessionId: string, tempId: string, sectionId: string, followUps: string[], completionText: string | null) => void
 }
 
 let _counter = 0
@@ -109,11 +123,15 @@ function _updateMessageDoc(
   })
 }
 
+function _appendFeed(feeds: Record<string, AgentFeedItem[]>, sessionId: string, item: AgentFeedItem): Record<string, AgentFeedItem[]> {
+  return { ...feeds, [sessionId]: [...(feeds[sessionId] ?? []), item] }
+}
 
 export const useChatStore = create<ChatState>((set) => ({
   threads: {},
   panelMessages: {},
   sessionTitles: {},
+  agentFeeds: {},
 
   addUserMessage: (sessionId, prompt) => {
     const id = tempId()
@@ -143,9 +161,6 @@ export const useChatStore = create<ChatState>((set) => ({
         ...s.threads,
         [sessionId]: (s.threads[sessionId] ?? []).map((m) => {
           if (m.id !== tempId) return m
-          // §4 append-only streaming: an analytical answer (plan present)
-          // KEEPS its streamed plan/findings/partial so the rendered blocks
-          // upgrade IN PLACE — nothing already on screen is removed or redrawn.
           if (m.plan) return { ...m, loading: false, stage: undefined, result }
           return { ...m, loading: false, stage: undefined, partial: undefined, plan: undefined, findings: undefined, result }
         }),
@@ -158,7 +173,9 @@ export const useChatStore = create<ChatState>((set) => ({
       threads: {
         ...s.threads,
         [sessionId]: (s.threads[sessionId] ?? []).map((m) =>
-          m.id === tempId ? { ...m, loading: false, stage: undefined, partial: undefined, plan: undefined, findings: undefined, error, errorType, errorDetail, retryPrompt: retryPrompt ?? null } : m
+          m.id === tempId
+            ? { ...m, loading: false, stage: undefined, partial: undefined, plan: undefined, findings: undefined, error, errorType, errorDetail, retryPrompt: retryPrompt ?? null }
+            : m
         ),
       },
     }))
@@ -211,13 +228,21 @@ export const useChatStore = create<ChatState>((set) => ({
       const msgs = s.threads[from]
       if (!msgs?.length) return s
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { [from]: _removed, ...rest } = s.threads
-      return { threads: { ...rest, [to]: [...(rest[to] ?? []), ...msgs] } }
+      const { [from]: _removedT, ...restT } = s.threads
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { [from]: _removedF, ...restF } = s.agentFeeds
+      return {
+        threads: { ...restT, [to]: [...(restT[to] ?? []), ...msgs] },
+        agentFeeds: { ...restF, [to]: [...(restF[to] ?? []), ...(s.agentFeeds[from] ?? [])] },
+      }
     })
   },
 
   clearThread: (sessionId) => {
-    set((s) => ({ threads: { ...s.threads, [sessionId]: [] } }))
+    set((s) => ({
+      threads: { ...s.threads, [sessionId]: [] },
+      agentFeeds: { ...s.agentFeeds, [sessionId]: [] },
+    }))
   },
 
   loadThread: (sessionId, messages) => {
@@ -279,6 +304,13 @@ export const useChatStore = create<ChatState>((set) => ({
           sections: [...doc.sections, { id: sectionId, question, cells: [], agent_notes: [] }],
         })),
       },
+      agentFeeds: _appendFeed(s.agentFeeds, sessionId, { t: "question", sectionId, text: question }),
+    }))
+  },
+
+  v2CellStart: (sessionId, _tempId, cellId, name, kind, sectionId) => {
+    set((s) => ({
+      agentFeeds: _appendFeed(s.agentFeeds, sessionId, { t: "cell", sectionId, cellId, name, kind, status: "running" }),
     }))
   },
 
@@ -293,6 +325,14 @@ export const useChatStore = create<ChatState>((set) => ({
               ? sec.cells.map((c) => (c.id === cell.id ? cell : c))
               : [...sec.cells, cell],
           }))
+        ),
+      },
+      agentFeeds: {
+        ...s.agentFeeds,
+        [sessionId]: (s.agentFeeds[sessionId] ?? []).map((item) =>
+          item.t === "cell" && item.cellId === cell.id
+            ? { ...item, status: "complete" as const }
+            : item
         ),
       },
     }))
@@ -320,6 +360,7 @@ export const useChatStore = create<ChatState>((set) => ({
           _updateSection(doc, sectionId, (sec) => ({ ...sec, layout: order }))
         ),
       },
+      agentFeeds: _appendFeed(s.agentFeeds, sessionId, { t: "layout", sectionId }),
     }))
   },
 
@@ -334,6 +375,7 @@ export const useChatStore = create<ChatState>((set) => ({
           }))
         ),
       },
+      agentFeeds: _appendFeed(s.agentFeeds, sessionId, { t: "note", sectionId, text: note.text, kind: note.kind }),
     }))
   },
 
@@ -343,7 +385,7 @@ export const useChatStore = create<ChatState>((set) => ({
     }))
   },
 
-  v2DocDone: (sessionId, tempId, followUps, completionText) => {
+  v2DocDone: (sessionId, tempId, sectionId, followUps, completionText) => {
     set((s) => ({
       threads: {
         ...s.threads,
@@ -353,6 +395,9 @@ export const useChatStore = create<ChatState>((set) => ({
           completion_text: completionText,
         })),
       },
+      agentFeeds: completionText
+        ? _appendFeed(s.agentFeeds, sessionId, { t: "completion", sectionId, text: completionText })
+        : s.agentFeeds,
     }))
   },
 }))

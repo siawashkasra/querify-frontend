@@ -46,12 +46,14 @@ export default function ChatPage({ params }: ChatPageProps) {
     resolvePanelMessage,
     rejectPanelMessage,
     v2SectionStart,
+    v2CellStart,
     v2CellComplete,
     v2CellUpdate,
     v2Layout,
     v2AgentNote,
     v2SessionTitle,
     v2DocDone,
+    agentFeeds,
   } = useChatStore()
   const { getSignal, cancel } = useAbortController()
   const plan = usePlan()
@@ -153,9 +155,8 @@ export default function ChatPage({ params }: ChatPageProps) {
   const currentPanelMessages = panelMessages[sessionId] ?? []
   const liveTitle = useSessionTitle(sessionId, session?.title)
 
-  // Sections from the latest live document in the thread (for CompanionPanel)
-  const latestDoc = [...messages].reverse().find((m) => m.role === "assistant" && m.document)?.document
-  const panelSections = latestDoc?.sections ?? []
+  // agentFeed for companion panel
+  const currentAgentFeed = agentFeeds[sessionId] ?? []
 
   const handleSubmit = useCallback(
     async (prompt: string) => {
@@ -168,7 +169,7 @@ export default function ChatPage({ params }: ChatPageProps) {
           {
             setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding,
             resolveMessage, rejectMessage,
-            v2SectionStart, v2CellComplete, v2CellUpdate, v2Layout, v2AgentNote, v2SessionTitle, v2DocDone,
+            v2SectionStart, v2CellStart, v2CellComplete, v2CellUpdate, v2Layout, v2AgentNote, v2SessionTitle, v2DocDone,
           },
           sessionId, loadingId,
           { prompt, session_id: sessionId, connection_id: activeConnectionId },
@@ -195,7 +196,7 @@ export default function ChatPage({ params }: ChatPageProps) {
           {
             setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding,
             resolveMessage, rejectMessage,
-            v2SectionStart, v2CellComplete, v2CellUpdate, v2Layout, v2AgentNote, v2SessionTitle, v2DocDone,
+            v2SectionStart, v2CellStart, v2CellComplete, v2CellUpdate, v2Layout, v2AgentNote, v2SessionTitle, v2DocDone,
           },
           sessionId, loadingId,
           { prompt: text, session_id: sessionId, connection_id: activeConnectionId },
@@ -241,7 +242,10 @@ export default function ChatPage({ params }: ChatPageProps) {
 
       <ChatHeader
         sessionTitle={sessionTitles[sessionId] ?? session?.title ?? null}
-        onTitleChange={(t) => v2SessionTitle(sessionId, t)}
+        onTitleChange={(t) => {
+          v2SessionTitle(sessionId, t)
+          queryApi.updateSession(sessionId, { title: t, user_renamed: true }).catch(() => { /* ignore */ })
+        }}
       />
 
       <div className="flex flex-1 min-h-0 overflow-hidden">
@@ -281,7 +285,7 @@ export default function ChatPage({ params }: ChatPageProps) {
 
           {showRightPanel && (
             <CompanionPanel
-              sections={panelSections}
+              agentFeed={currentAgentFeed}
               panelMessages={currentPanelMessages}
               onPanelMessage={handlePanelSubmit}
               isLoading={panelLoading}

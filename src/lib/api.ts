@@ -448,6 +448,8 @@ export const query = {
     get<ChatSession[]>("/api/v1/sessions", connection_id ? { connection_id } : undefined),
   createSession: (data: { connection_id: string; title?: string }) =>
     post<ChatSession>("/api/v1/sessions", data),
+  updateSession: (id: string, data: { title?: string; user_renamed?: boolean }) =>
+    patch<ChatSession>(`/api/v1/sessions/${id}`, data),
   deleteSession: (id: string) => del<void>(`/api/v1/sessions/${id}`),
 }
 

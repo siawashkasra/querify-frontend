@@ -3,13 +3,25 @@
 import Link from "next/link"
 import { useParams } from "next/navigation"
 import { useQuery } from "@tanstack/react-query"
-import { Plus } from "lucide-react"
+import { Plus, Scale, TrendingUp, Search, BarChart2, Sparkles } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import { query as queryApi } from "@/lib/api"
 import { useAppStore } from "@/store/appStore"
 import { cn } from "@/lib/cn"
 import { useChatStore } from "@/store/chatStore"
 import type { ChatSession } from "@/types"
+
+function IntentIcon({ intent }: { intent?: string | null }) {
+  const cls = "w-3 h-3 shrink-0 text-[var(--text-muted)]"
+  switch (intent) {
+    case "metric":      return <Scale className={cls} />
+    case "trend":       return <TrendingUp className={cls} />
+    case "diagnostic":  return <Search className={cls} />
+    case "ranking":     return <BarChart2 className={cls} />
+    case "discovery":   return <Sparkles className={cls} />
+    default:            return null
+  }
+}
 
 export const SessionSidebar = () => {
   const params = useParams()
@@ -48,11 +60,14 @@ export const SessionSidebar = () => {
               activeSessionId === s.id && "bg-[var(--brand-light)] border-r-2 border-brand"
             )}
           >
-            <span className={cn(
-              "font-medium truncate leading-tight",
-              activeSessionId === s.id ? "text-brand" : "text-[var(--text)]"
-            )}>
-              {(sessionTitles[s.id] ?? s.title ?? "Untitled chat").slice(0, 40)}
+            <span className="flex items-center gap-1 min-w-0">
+              <IntentIcon intent={s.dominant_intent} />
+              <span className={cn(
+                "font-medium truncate leading-tight",
+                activeSessionId === s.id ? "text-brand" : "text-[var(--text)]"
+              )}>
+                {(sessionTitles[s.id] ?? s.title ?? "Untitled chat").slice(0, 40)}
+              </span>
             </span>
             <span className="text-[var(--text-muted)]">
               {formatDistanceToNow(new Date(s.last_active_at), { addSuffix: true })}
