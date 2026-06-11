@@ -1,8 +1,7 @@
 "use client"
 
-import { use, useEffect, useState, useCallback, useRef } from "react"
+import { use, useEffect, useState, useCallback } from "react"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
-import { ChevronLeft, ChevronRight } from "lucide-react"
 import { useAppStore } from "@/store/appStore"
 import { connections as connectionsApi, query as queryApi } from "@/lib/api"
 import { useChatStore } from "@/store/chatStore"
@@ -10,16 +9,15 @@ import type { ThreadMessage } from "@/store/chatStore"
 import { useAbortController } from "@/hooks/useAbortController"
 import { runStreaming } from "@/lib/runStreaming"
 import { usePlan } from "@/hooks/usePlan"
-import { useSuggestedQuestions } from "@/hooks/useSuggestedQuestions"
 import ChatHeader from "@/components/chat/ChatHeader"
-import MessageThread from "@/components/chat/MessageThread"
-import RightPanel from "@/components/chat/RightPanel"
-import CentredPromptInput from "@/components/chat/CentredPromptInput"
-import BottomPromptInput, { type BottomPromptInputHandle } from "@/components/chat/BottomPromptInput"
+import ChatCanvas from "@/components/chat/ChatCanvas"
+import { Composer } from "@/components/chat/Composer"
+import { CompanionPanel } from "@/components/chat/CompanionPanel"
 import SchemaChangeBanner from "@/components/chat/SchemaChangeBanner"
 import RefreshSuggestionBanner from "@/components/chat/RefreshSuggestionBanner"
 import { UpgradePromptBanner } from "@/components/billing/UpgradePrompt"
-import type { ChatMessage, ChatSession, Connection, QueryResult } from "@/types"
+import { useSessionTitle } from "@/hooks/useSessionTitle"
+import type { ChatMessage, ChatSession, Connection } from "@/types"
 import { cn } from "@/lib/cn"
 
 interface ChatPageProps {
@@ -33,6 +31,7 @@ export default function ChatPage({ params }: ChatPageProps) {
   const {
     threads,
     panelMessages,
+    sessionTitles,
     addUserMessage,
     addLoadingMessage,
     resolveMessage,
@@ -58,10 +57,8 @@ export default function ChatPage({ params }: ChatPageProps) {
   const plan = usePlan()
   const [loading, setLoading] = useState(false)
   const [panelLoading, setPanelLoading] = useState(false)
-  const [sessionTitle, setSessionTitle] = useState<string | null>(null)
   const [usageWarning, setUsageWarning] = useState<{ pct: number } | null>(null)
   const [warningDismissed, setWarningDismissed] = useState(false)
-  const inputRef = useRef<BottomPromptInputHandle>(null)
 
   useEffect(() => {
     function onWarning(e: Event) {
@@ -95,6 +92,8 @@ export default function ChatPage({ params }: ChatPageProps) {
     enabled: !hasLiveMessages,
   })
 
+  // Hydrate store from API — converts flat ChatMessage[] → ThreadMessage[] pairs.
+  // When answer_document is present, attach it as `document` for SessionCanvas.
   useEffect(() => {
     if (!apiMessages?.length || hasLiveMessages) return
     const localThread = useChatStore.getState().threads[sessionId]
@@ -113,6 +112,8 @@ export default function ChatPage({ params }: ChatPageProps) {
         id: m.id,
         role: "assistant",
         createdAt: new Date(m.created_at),
+        // v2: rehydrate document from answer_document if present
+        document: m.answer_document ?? undefined,
         ...(m.status === "failed" || m.error_type
           ? { error: m.error_message ?? "Query failed.", errorType: m.error_type, errorDetail: m.error_message }
           : {
@@ -146,14 +147,15 @@ export default function ChatPage({ params }: ChatPageProps) {
 
   useEffect(() => {
     setActiveSession(sessionId)
-    if (session?.title) setSessionTitle(session.title)
-  }, [sessionId, session, setActiveSession])
+  }, [sessionId, setActiveSession])
 
   const messages = threads[sessionId] ?? []
   const currentPanelMessages = panelMessages[sessionId] ?? []
-  const recentAssistantMessage = [...messages].reverse().find((m) => m.role === "assistant") ?? null
-  const currentResult = recentAssistantMessage?.result
-  const { suggestions, isLoading: suggestionsLoading } = useSuggestedQuestions(activeConnectionId)
+  const liveTitle = useSessionTitle(sessionId, session?.title)
+
+  // Sections from the latest live document in the thread (for CompanionPanel)
+  const latestDoc = [...messages].reverse().find((m) => m.role === "assistant" && m.document)?.document
+  const panelSections = latestDoc?.sections ?? []
 
   const handleSubmit = useCallback(
     async (prompt: string) => {
@@ -163,19 +165,23 @@ export default function ChatPage({ params }: ChatPageProps) {
       const loadingId = addLoadingMessage(sessionId)
       try {
         await runStreaming(
-          { setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding, resolveMessage, rejectMessage, v2SectionStart, v2CellComplete, v2CellUpdate, v2Layout, v2AgentNote, v2SessionTitle, v2DocDone },
+          {
+            setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding,
+            resolveMessage, rejectMessage,
+            v2SectionStart, v2CellComplete, v2CellUpdate, v2Layout, v2AgentNote, v2SessionTitle, v2DocDone,
+          },
           sessionId, loadingId,
           { prompt, session_id: sessionId, connection_id: activeConnectionId },
           getSignal(),
         )
         qc.invalidateQueries({ queryKey: ["session-messages", sessionId] })
         qc.invalidateQueries({ queryKey: ["sessions"] })
-        if (!sessionTitle) setSessionTitle(prompt.slice(0, 40))
       } finally {
         setLoading(false)
       }
     },
-    [activeConnectionId, sessionId, sessionTitle, addUserMessage, addLoadingMessage, resolveMessage, rejectMessage, setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding, getSignal, qc]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeConnectionId, sessionId]
   )
 
   const handlePanelSubmit = useCallback(
@@ -185,15 +191,21 @@ export default function ChatPage({ params }: ChatPageProps) {
       addPanelUserMessage(sessionId, text)
       const loadingId = addPanelLoadingMessage(sessionId)
       try {
-        const result = (await queryApi.execute(
+        await runStreaming(
+          {
+            setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding,
+            resolveMessage, rejectMessage,
+            v2SectionStart, v2CellComplete, v2CellUpdate, v2Layout, v2AgentNote, v2SessionTitle, v2DocDone,
+          },
+          sessionId, loadingId,
           { prompt: text, session_id: sessionId, connection_id: activeConnectionId },
-          undefined
-        )) as QueryResult
-        const responseText =
-          result.summary ||
-          result.analytical_narrative?.split("\n\n")[0] ||
-          (result.status === "failed" ? (result.message ?? "Query failed.") : "Done.")
-        resolvePanelMessage(sessionId, loadingId, responseText ?? "Done.")
+          getSignal(),
+        )
+        // Resolve panel message with the QUICK answer that arrived via panel_message SSE
+        const panelMsg = (useChatStore.getState().panelMessages[sessionId] ?? []).find(
+          (m) => m.id === loadingId
+        )
+        resolvePanelMessage(sessionId, loadingId, panelMsg?.text || "Done.")
       } catch (err: unknown) {
         const apiErr = err as { message?: string } | null
         rejectPanelMessage(sessionId, loadingId, apiErr?.message ?? "Query failed.")
@@ -201,7 +213,8 @@ export default function ChatPage({ params }: ChatPageProps) {
         setPanelLoading(false)
       }
     },
-    [activeConnectionId, sessionId, addPanelUserMessage, addPanelLoadingMessage, resolvePanelMessage, rejectPanelMessage]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeConnectionId, sessionId]
   )
 
   const hasMessages = messages.length > 0
@@ -226,105 +239,57 @@ export default function ChatPage({ params }: ChatPageProps) {
         <RefreshSuggestionBanner connection={activeConn} />
       )}
 
-      {!hasMessages ? (
-        /* ── EMPTY STATE ── */
-        <div className="flex flex-col items-center justify-center flex-1 px-6 py-12">
-          <div className="text-center mb-8">
-            <h1 className="text-2xl font-semibold text-[var(--text)] mb-2">What would you like to know?</h1>
-            {activeConn
-              ? <p className="text-sm text-[var(--text-muted)]">Connected to <span className="font-medium text-[var(--text-dim)]">{activeConn.name}</span></p>
-              : <p className="text-sm text-[var(--text-muted)]">Select a connection to get started</p>
-            }
-          </div>
-          <div className="w-full max-w-2xl">
-            <CentredPromptInput
-              onSubmit={handleSubmit}
-              isLoading={loading}
-              connectionName={activeConn?.name}
-              dbType={activeConn?.db_type}
-            />
-          </div>
-          <div className="flex flex-wrap gap-2 mt-6 justify-center max-w-2xl">
-            {suggestionsLoading
-              ? Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="h-9 w-40 rounded-full animate-pulse bg-[var(--surface-3)]" />
-                ))
-              : suggestions.slice(0, 6).map((s) => (
-                  <button
-                    key={s.question}
-                    onClick={() => handleSubmit(s.question)}
-                    disabled={loading || !activeConnectionId}
-                    className="px-4 py-2 rounded-full text-sm bg-white border border-[var(--border)] text-[var(--text-dim)] hover:border-brand hover:text-brand transition-colors disabled:opacity-40"
-                  >
-                    {s.question}
-                  </button>
-                ))
-            }
-          </div>
-        </div>
-      ) : (
-        /* ── ACTIVE LAYOUT: [chat] + [right panel] ── */
-        <div className="flex flex-1 min-h-0 overflow-hidden">
-          {/* LEFT: Chat column */}
-          <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-            <ChatHeader
-              sessionTitle={sessionTitle ?? session?.title ?? null}
-              onTitleChange={setSessionTitle}
-            />
-            {/* Thread — direct flex child so its own overflow-y-auto is the sole scroll container */}
-            <MessageThread
+      <ChatHeader
+        sessionTitle={sessionTitles[sessionId] ?? session?.title ?? null}
+        onTitleChange={(t) => v2SessionTitle(sessionId, t)}
+      />
+
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Canvas column */}
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+          {hasMessages ? (
+            <ChatCanvas
               messages={messages}
               connectionName={activeConn?.name}
-              onFollowUp={() => inputRef.current?.focus()}
+              onFollowUp={handleSubmit}
               onRetry={handleSubmit}
-              onSuggestedQuestion={handleSubmit}
             />
-            <BottomPromptInput
-              ref={inputRef}
-              onSubmit={handleSubmit}
-              onCancel={cancel}
-              loading={loading}
-              disabled={!activeConnectionId}
-            />
-          </div>
+          ) : null}
 
-          {/* RIGHT: Panel area — relative so edge toggle can float */}
-          <div className="relative hidden md:flex shrink-0">
-            {/* Edge toggle button — always visible on panel left edge */}
-            <button
-              onClick={toggleRightPanel}
-              className={cn(
-                "absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-20",
-                "flex items-center justify-center w-6 h-6 rounded-full",
-                "bg-[var(--surface-2)] border border-[var(--border-2)]",
-                "shadow-[0_2px_8px_rgba(0,0,0,0.2)]",
-                "hover:bg-[var(--surface-3)] transition-all duration-150"
-              )}
-              title={showRightPanel ? "Close analysis panel" : "Open analysis panel"}
-            >
-              {showRightPanel
-                ? <ChevronRight size={10} className="text-[var(--text-dim)]" />
-                : <ChevronLeft size={10} className="text-[var(--text-dim)]" />
-              }
-            </button>
-
-            {/* Panel content */}
-            {showRightPanel && (
-              <RightPanel
-                recentMessage={recentAssistantMessage}
-                panelMessages={currentPanelMessages}
-                onPanelSubmit={handlePanelSubmit}
-                isPanelLoading={panelLoading}
-                isVisible={showRightPanel}
-                onToggle={toggleRightPanel}
-                sessionTitle={sessionTitle ?? session?.title ?? null}
-                connectionName={activeConn?.name}
-                currentResult={currentResult}
-              />
-            )}
-          </div>
+          <Composer
+            onSubmit={handleSubmit}
+            isLoading={loading}
+            hasContent={hasMessages}
+            connectionName={activeConn?.name}
+          />
         </div>
-      )}
+
+        {/* Companion panel */}
+        <div className="relative hidden md:flex shrink-0">
+          <button
+            onClick={toggleRightPanel}
+            className={cn(
+              "absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-20",
+              "flex items-center justify-center w-6 h-6 rounded-full",
+              "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700",
+              "shadow-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-150"
+            )}
+            title={showRightPanel ? "Close panel" : "Open panel"}
+          >
+            <span className="text-[10px] text-gray-500">{showRightPanel ? "›" : "‹"}</span>
+          </button>
+
+          {showRightPanel && (
+            <CompanionPanel
+              sections={panelSections}
+              panelMessages={currentPanelMessages}
+              onPanelMessage={handlePanelSubmit}
+              isLoading={panelLoading}
+              className="w-72"
+            />
+          )}
+        </div>
+      </div>
     </div>
   )
 }

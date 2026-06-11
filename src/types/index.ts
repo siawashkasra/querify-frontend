@@ -187,6 +187,7 @@ export interface ChatMessage {
   confidence_level?: "high" | "medium" | "low" | null
   confidence_factors?: string[]
   confidence_caveats?: string[]
+  answer_document?: AnswerDocument | null
 }
 
 export interface AnalyticalSubQuery {

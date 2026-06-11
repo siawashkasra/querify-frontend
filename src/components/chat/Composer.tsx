@@ -26,10 +26,11 @@ interface Props {
   connectionName?: string
   recentSessions?: { id: string; title: string }[]
   onJumpBack?: (sessionId: string) => void
+  initialValue?: string
 }
 
-export function Composer({ onSubmit, isLoading, hasContent, connectionName, recentSessions, onJumpBack }: Props) {
-  const [value, setValue] = useState("")
+export function Composer({ onSubmit, isLoading, hasContent, connectionName, recentSessions, onJumpBack, initialValue }: Props) {
+  const [value, setValue] = useState(initialValue ?? "")
   const ref = useRef<HTMLTextAreaElement>(null)
   const isDocked = hasContent || isLoading
 

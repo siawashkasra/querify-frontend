@@ -9,9 +9,8 @@ import { useAbortController } from "@/hooks/useAbortController"
 import { runStreaming } from "@/lib/runStreaming"
 import SessionSidebar from "@/components/chat/SessionSidebar"
 import ChatHeader from "@/components/chat/ChatHeader"
-import MessageThread from "@/components/chat/MessageThread"
-import PromptInput, { type PromptInputHandle } from "@/components/chat/PromptInput"
-import SuggestedPrompts from "@/components/chat/SuggestedPrompts"
+import ChatCanvas from "@/components/chat/ChatCanvas"
+import { Composer } from "@/components/chat/Composer"
 
 const NEW_SESSION_KEY = "__new__"
 
@@ -27,13 +26,32 @@ function NewChatPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { activeConnectionId, setActiveConnection } = useAppStore()
-  const { threads, addUserMessage, addLoadingMessage, resolveMessage, rejectMessage, setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding, migrateThread, v2SectionStart, v2CellComplete, v2CellUpdate, v2Layout, v2AgentNote, v2SessionTitle, v2DocDone } = useChatStore()
-  const { getSignal, cancel } = useAbortController()
+  const {
+    threads,
+    addUserMessage,
+    addLoadingMessage,
+    resolveMessage,
+    rejectMessage,
+    setMessageStage,
+    setMessagePartial,
+    setMessagePlan,
+    addMessageFinding,
+    migrateThread,
+    v2SectionStart,
+    v2CellComplete,
+    v2CellUpdate,
+    v2Layout,
+    v2AgentNote,
+    v2SessionTitle,
+    v2DocDone,
+  } = useChatStore()
+  const { getSignal } = useAbortController()
   const [loading, setLoading] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
-  const pendingSubmit = useRef<string | null>(null)
-  const inputRef = useRef<PromptInputHandle>(null)
   const autoSubmitDone = useRef(false)
+
+  // Draft param — pre-fill composer (not auto-submitted)
+  const draftParam = searchParams.get("draft") ?? undefined
 
   const threadKey = sessionId ?? NEW_SESSION_KEY
   const messages = threads[threadKey] ?? []
@@ -58,7 +76,11 @@ function NewChatPage() {
       const resolvedSession = await ensureSession(activeConnectionId)
       if (resolvedSession !== sid) migrateThread(sid, resolvedSession)
       await runStreaming(
-        { setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding, resolveMessage, rejectMessage, v2SectionStart, v2CellComplete, v2CellUpdate, v2Layout, v2AgentNote, v2SessionTitle, v2DocDone },
+        {
+          setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding,
+          resolveMessage, rejectMessage,
+          v2SectionStart, v2CellComplete, v2CellUpdate, v2Layout, v2AgentNote, v2SessionTitle, v2DocDone,
+        },
         resolvedSession, loadingId,
         { prompt, session_id: resolvedSession, connection_id: activeConnectionId },
         getSignal(),
@@ -67,20 +89,6 @@ function NewChatPage() {
       setLoading(false)
     }
   }
-
-  useEffect(() => {
-    if (pendingSubmit.current) {
-      const prompt = pendingSubmit.current
-      pendingSubmit.current = null
-      handleSubmit(prompt)
-    }
-  })
-
-  useEffect(() => {
-    const draftParam = searchParams.get("draft")
-    if (!draftParam) return
-    queueMicrotask(() => inputRef.current?.setValue(draftParam))
-  }, [searchParams])
 
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
@@ -94,26 +102,27 @@ function NewChatPage() {
   }, [searchParams])
   /* eslint-enable react-hooks/exhaustive-deps */
 
-  const handleChipSelect = (prompt: string) => {
-    if (!loading) handleSubmit(prompt)
-  }
+  const hasMessages = messages.length > 0
 
   return (
     <div className="flex h-full">
       <SessionSidebar />
-      <div className="flex flex-col flex-1 min-w-0 h-full">
+      <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
         <ChatHeader sessionTitle={null} />
-        {messages.length === 0 ? (
-          <SuggestedPrompts onSelect={handleChipSelect} />
-        ) : (
-          <MessageThread messages={messages} onFollowUp={() => inputRef.current?.focus()} onRetry={handleSubmit} />
+
+        {hasMessages && (
+          <ChatCanvas
+            messages={messages}
+            onFollowUp={handleSubmit}
+            onRetry={handleSubmit}
+          />
         )}
-        <PromptInput
-          ref={inputRef}
+
+        <Composer
           onSubmit={handleSubmit}
-          onCancel={cancel}
-          loading={loading}
-          disabled={!activeConnectionId}
+          isLoading={loading}
+          hasContent={hasMessages}
+          initialValue={draftParam}
         />
       </div>
     </div>
