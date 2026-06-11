@@ -240,6 +240,27 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
         </BarChart>
       </ResponsiveContainer>
     )
+  } else if (t === "diverging_bar") {
+    // Diagnostic decomposition (E3): horizontal % change bars, one per driver,
+    // positive green / negative red, centred on a zero axis.
+    chart = (
+      <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+        <BarChart data={data} layout="vertical" barSize={18}>
+          <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" horizontal={false} vertical />
+          <XAxis type="number" tick={{ fill: "var(--text-muted)", fontFamily: "IBM Plex Mono", fontSize: 11 }}
+            tickLine={false} axisLine={false} tickFormatter={(v: unknown) => formatAxis(v, yPrimary)} />
+          <YAxis type="category" dataKey={x} tick={{ fill: "var(--text-muted)", fontFamily: "IBM Plex Mono", fontSize: 11 }}
+            tickLine={false} axisLine={false} width={130} tickFormatter={(v: unknown) => truncate(String(v), 18)} />
+          {TooltipEl}
+          <ReferenceLine x={0} stroke="var(--text-muted)" />
+          <Bar dataKey={yPrimary} name={humanize(yPrimary)} radius={[0, 3, 3, 0]} isAnimationActive={mounted}>
+            {data.map((d, i) => (
+              <Cell key={i} fill={(d[yPrimary] as number) >= 0 ? SUCCESS : DANGER} />
+            ))}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    )
   } else if (t === "grouped_bar" || t === "stacked_bar" || t === "stacked_100_bar") {
     const stackId = t === "grouped_bar" ? undefined : "stack"
     const pct = t === "stacked_100_bar"

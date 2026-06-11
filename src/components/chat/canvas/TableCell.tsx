@@ -206,12 +206,15 @@ export function TableCell({ cell, messageId }: Props) {
           <thead>
             {table.getHeaderGroups().map((hg) => (
               <tr key={hg.id} className="bg-gray-50 dark:bg-gray-800">
-                {hg.headers.map((header) => {
+                {hg.headers.map((header, ci) => {
                   const sorted = header.column.getIsSorted()
                   return (
                     <th
                       key={header.id}
-                      className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap select-none"
+                      className={cn(
+                        "px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap select-none",
+                        ci === 0 && "sticky left-0 z-10 bg-gray-50 dark:bg-gray-800"
+                      )}
                       onClick={header.column.getToggleSortingHandler()}
                       style={{ cursor: "pointer" }}
                     >
@@ -242,9 +245,15 @@ export function TableCell({ cell, messageId }: Props) {
               </tr>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-3 py-2 text-gray-700 dark:text-gray-300 whitespace-nowrap">
+                <tr key={row.id} className="group/row hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                  {row.getVisibleCells().map((cell, ci) => (
+                    <td
+                      key={cell.id}
+                      className={cn(
+                        "px-3 py-2 text-gray-700 dark:text-gray-300 whitespace-nowrap",
+                        ci === 0 && "sticky left-0 z-10 bg-white dark:bg-gray-900 group-hover/row:bg-gray-50 dark:group-hover/row:bg-gray-800/50"
+                      )}
+                    >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}

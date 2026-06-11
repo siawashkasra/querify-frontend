@@ -158,6 +158,14 @@ export default function ChatPage({ params }: ChatPageProps) {
   // agentFeed for companion panel
   const currentAgentFeed = agentFeeds[sessionId] ?? []
 
+  // Cells available for @mention + follow-up suggestions, derived from the
+  // latest assistant message's document.
+  const latestDoc = [...messages].reverse().find((m) => m.role === "assistant" && m.document)?.document
+  const mentionCells = (latestDoc?.sections ?? []).flatMap((s) =>
+    s.cells.map((c) => ({ name: c.name, kind: c.kind }))
+  )
+  const panelFollowUps = latestDoc?.follow_ups ?? []
+
   const handleSubmit = useCallback(
     async (prompt: string) => {
       if (!activeConnectionId) return
@@ -289,7 +297,10 @@ export default function ChatPage({ params }: ChatPageProps) {
               panelMessages={currentPanelMessages}
               onPanelMessage={handlePanelSubmit}
               isLoading={panelLoading}
-              className="w-72"
+              cells={mentionCells}
+              followUps={panelFollowUps}
+              onRetry={handleSubmit}
+              className="w-72 md:w-[340px]"
             />
           )}
         </div>

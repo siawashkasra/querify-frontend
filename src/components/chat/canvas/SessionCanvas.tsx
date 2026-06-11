@@ -191,7 +191,7 @@ export function SessionCanvas({ sections, followUps, completionText, messageId, 
   if (!sections.length) return null
 
   return (
-    <div className="w-full max-w-[860px] mx-auto px-8 py-6">
+    <div className="w-full max-w-[860px] mx-auto px-4 sm:px-8 py-6">
       {sections.map((section) => (
         <div
           key={section.id}

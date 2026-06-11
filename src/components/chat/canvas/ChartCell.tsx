@@ -9,7 +9,9 @@ interface Props {
 }
 
 export function ChartCell({ cell }: Props) {
-  const config = cell.payload.config as ChartConfig | undefined
+  // Backend writes the chart config under `chart_config` (answer_assembly);
+  // accept `config` too for forward-compat.
+  const config = (cell.payload.chart_config ?? cell.payload.config) as ChartConfig | undefined
 
   const rows = useMemo<Record<string, unknown>[]>(() => {
     const columns = (cell.payload.columns as string[]) ?? []
@@ -42,7 +44,7 @@ export function ChartCell({ cell }: Props) {
   }
 
   return (
-    <div className="mb-4 h-[280px]">
+    <div className="mb-4 h-[220px] sm:h-[280px]">
       <QueryChart config={{ ...config, data: null }} rows={rows} />
     </div>
   )

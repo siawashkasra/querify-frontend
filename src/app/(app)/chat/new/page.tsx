@@ -132,7 +132,7 @@ function NewChatPage() {
           isLoading={loading}
           hasContent={hasMessages}
           initialValue={draftParam}
-          recentSessions={recentSessions?.slice(0, 3).map((s) => ({ id: s.id, title: s.title ?? "Untitled" }))}
+          recentSessions={recentSessions?.slice(0, 6).map((s) => ({ id: s.id, title: s.title ?? "Untitled", intent: s.dominant_intent }))}
           onJumpBack={(id) => router.push(`/chat/${id}`)}
         />
       </div>

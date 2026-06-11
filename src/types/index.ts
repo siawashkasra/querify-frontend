@@ -123,7 +123,7 @@ export interface KPICard {
 export type ChartType =
   | "line" | "area" | "bar" | "bar_horizontal" | "horizontal_bar" | "grouped_bar"
   | "stacked_bar" | "stacked_100_bar" | "donut" | "pie" | "scatter" | "histogram"
-  | "waterfall" | "sparkline" | "gauge" | "combo"
+  | "waterfall" | "sparkline" | "gauge" | "combo" | "diverging_bar"
 
 export interface ChartConfig {
   type: ChartType

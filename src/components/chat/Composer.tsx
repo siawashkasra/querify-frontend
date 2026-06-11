@@ -26,12 +26,26 @@ const STARTER_CHIPS = [
   "Why did sales drop in March?",
 ]
 
+// Intent → dot tint for the "Jump back in" list (mirrors the sidebar icons).
+const INTENT_DOT: Record<string, string> = {
+  comparison: "bg-blue-500",
+  trend: "bg-green-500",
+  diagnostic: "bg-amber-500",
+  ranking: "bg-violet-500",
+}
+
+interface RecentSession {
+  id: string
+  title: string
+  intent?: string | null
+}
+
 interface Props {
   onSubmit: (prompt: string) => void
   isLoading: boolean
   hasContent: boolean          // true when canvas has sections or a loading message
   connectionName?: string
-  recentSessions?: { id: string; title: string }[]
+  recentSessions?: RecentSession[]
   onJumpBack?: (sessionId: string) => void
   initialValue?: string
 }
@@ -54,11 +68,30 @@ export function Composer({ onSubmit, isLoading, hasContent, connectionName, rece
     ta.style.height = `${Math.min(ta.scrollHeight, 140)}px`
   }, [value])
 
+  // "/" focuses the composer from anywhere on the page (E6/E10).
+  useEffect(() => {
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key !== "/") return
+      const el = document.activeElement
+      const tag = el?.tagName
+      if (tag === "INPUT" || tag === "TEXTAREA" || (el as HTMLElement)?.isContentEditable) return
+      e.preventDefault()
+      ref.current?.focus()
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
+  }, [])
+
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault()
       handleSubmit()
+    } else if (e.key === "Escape") {
+      // Esc clears the composer (E6).
+      e.preventDefault()
+      setValue("")
     }
+    // Shift+Enter falls through → textarea inserts a newline.
   }
 
   const handleSubmit = () => {
@@ -105,7 +138,7 @@ export function Composer({ onSubmit, isLoading, hasContent, connectionName, rece
   // ── Hero mode (empty canvas) ──────────────────────────────────────────────
   if (!isDocked) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 py-8 gap-6">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 py-8 gap-6 motion-safe:animate-[fadeSlideIn_0.2s_ease-out]">
         <div className="text-center">
           <div className="inline-flex items-center gap-2 mb-3">
             <Zap size={20} className="text-violet-500" />
@@ -133,14 +166,15 @@ export function Composer({ onSubmit, isLoading, hasContent, connectionName, rece
         {recentSessions && recentSessions.length > 0 && (
           <div className="w-full max-w-xl">
             <p className="text-xs text-gray-400 dark:text-gray-500 mb-2 font-medium uppercase tracking-wide">Jump back in</p>
-            <div className="flex flex-col gap-1">
-              {recentSessions.slice(0, 3).map((s) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+              {recentSessions.slice(0, 6).map((s) => (
                 <button
                   key={s.id}
                   onClick={() => onJumpBack?.(s.id)}
-                  className="text-left px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors truncate"
+                  className="flex items-center gap-2 text-left px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:-translate-y-px transition-all truncate"
                 >
-                  {s.title || "Untitled session"}
+                  <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", INTENT_DOT[s.intent ?? ""] ?? "bg-gray-300 dark:bg-gray-600")} />
+                  <span className="truncate">{s.title || "Untitled session"}</span>
                 </button>
               ))}
             </div>

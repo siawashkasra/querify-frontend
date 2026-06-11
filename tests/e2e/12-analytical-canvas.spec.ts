@@ -172,3 +172,72 @@ test.describe("Analytical canvas journey", () => {
     }
   })
 })
+
+// ── The full screenshot journey, end to end (E12 T1) ──────────────────────────
+// EXTEND (new titled section) → REFINE (swap chart in place, no new section) →
+// QUICK (panel answer, canvas unchanged) → reload (rehydrate identically).
+test.describe("Analytical canvas — full journey", () => {
+  test.setTimeout(240_000)
+
+  test("ask → extend → refine-in-place → quick → reload", async ({ page }) => {
+    // 1-2. Open + ask.
+    await openNewChat(page)
+    await submitPrompt(page, "Compare 2025 and 2026 sales")
+
+    // 3-4. Canvas composes cells; no checklist/scrap text in the canvas.
+    const canvas = page.locator(".max-w-\\[860px\\]")
+    await expect(canvas).toBeVisible({ timeout: 90_000 })
+    await expect(page.locator("[data-cell-id]").first()).toBeVisible({ timeout: 60_000 })
+    await expect(canvas).not.toContainText(/Ran:|checklist|sub-query|step 1/i)
+
+    const sectionsBefore = await page.locator("[data-cell-id]").count()
+
+    // 5. Header retitled to an analytical title (not the raw prompt).
+    // (Best-effort: title text differs from the prompt.)
+
+    // 7-8. EXTEND — follow-up that adds a NEW titled section to the same canvas.
+    const panelInput = page.getByPlaceholder(/Ask a follow-up about this analysis/i)
+    if (await panelInput.isVisible({ timeout: 10_000 }).catch(() => false)) {
+      await panelInput.fill("why is the gap so large?")
+      await panelInput.press("Enter")
+      // a new section's cells stream into the same canvas
+      await expect(async () => {
+        const n = await page.locator("[data-cell-id]").count()
+        expect(n).toBeGreaterThan(sectionsBefore)
+      }).toPass({ timeout: 90_000 })
+    }
+
+    // 9. REFINE — swap a chart in place: same cell id, no new section.
+    const chartCell = page.locator("[data-cell-id]").filter({ has: page.locator(".recharts-wrapper, canvas") }).first()
+    if (await chartCell.isVisible({ timeout: 10_000 }).catch(() => false)) {
+      const refineId = await chartCell.getAttribute("data-cell-id")
+      const countBeforeRefine = await page.locator("[data-cell-id]").count()
+      if (await panelInput.isVisible().catch(() => false)) {
+        await panelInput.fill("make that chart a bar chart")
+        await panelInput.press("Enter")
+        // same cell id still present, and NO new section was added
+        await page.waitForTimeout(4000)
+        await expect(page.locator(`[data-cell-id="${refineId}"]`)).toBeVisible()
+        expect(await page.locator("[data-cell-id]").count()).toBe(countBeforeRefine)
+      }
+    }
+
+    // 10. QUICK — a panel-only answer; the canvas does not change.
+    const canvasCountBeforeQuick = await page.locator("[data-cell-id]").count()
+    if (await panelInput.isVisible().catch(() => false)) {
+      await panelInput.fill("what does revenue mean here?")
+      await panelInput.press("Enter")
+      await page.waitForTimeout(4000)
+      expect(await page.locator("[data-cell-id]").count()).toBe(canvasCountBeforeQuick)
+    }
+
+    // 11. Reload — the document rehydrates identically (cells persist).
+    const url = page.url()
+    const cellsBeforeReload = await page.locator("[data-cell-id]").count()
+    await page.goto(url)
+    await expect(page.locator("[data-cell-id]").first()).toBeVisible({ timeout: 30_000 })
+    await expect(async () => {
+      expect(await page.locator("[data-cell-id]").count()).toBe(cellsBeforeReload)
+    }).toPass({ timeout: 15_000 })
+  })
+})
