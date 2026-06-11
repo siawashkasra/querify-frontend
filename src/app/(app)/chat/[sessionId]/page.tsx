@@ -1,6 +1,7 @@
 "use client"
 
 import { use, useEffect, useState, useCallback } from "react"
+import { useRouter } from "next/navigation"
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useAppStore } from "@/store/appStore"
 import { connections as connectionsApi, query as queryApi } from "@/lib/api"
@@ -26,6 +27,7 @@ interface ChatPageProps {
 
 export default function ChatPage({ params }: ChatPageProps) {
   const { sessionId } = use(params)
+  const router = useRouter()
   const qc = useQueryClient()
   const { activeConnectionId, setActiveSession, showRightPanel, toggleRightPanel } = useAppStore()
   const {
@@ -79,11 +81,18 @@ export default function ChatPage({ params }: ChatPageProps) {
     staleTime: 30_000,
   })
 
-  const { data: session } = useQuery<ChatSession>({
+  const { data: session, error: sessionError } = useQuery<ChatSession>({
     queryKey: ["session", sessionId],
     queryFn: () => queryApi.session(sessionId) as Promise<ChatSession>,
     staleTime: 60_000,
+    retry: false,
   })
+
+  // The session was deleted (or never existed) — don't strand the user on a
+  // dead URL that would 404 every query. Bounce to a fresh chat.
+  useEffect(() => {
+    if (sessionError) router.replace("/chat/new")
+  }, [sessionError, router])
 
   const hasLiveMessages = (threads[sessionId] ?? []).some((m) => m.loading === true)
 

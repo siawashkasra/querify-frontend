@@ -226,6 +226,7 @@ function SessionItem({ session, isActive, onDelete }: { session: ChatSession; is
 
 function SessionHistory({ activeSessionId }: { activeSessionId: string | undefined }) {
   const qc = useQueryClient()
+  const router = useRouter()
   const { activeConnectionId } = useAppStore()
   const [searchOpen, setSearchOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
@@ -243,8 +244,11 @@ function SessionHistory({ activeSessionId }: { activeSessionId: string | undefin
     try {
       await queryApi.deleteSession(id)
       qc.invalidateQueries({ queryKey: ["sessions"] })
+      // If the deleted session is the one currently open, leave it — otherwise
+      // the page keeps streaming to a session that no longer exists (404).
+      if (id === activeSessionId) router.push("/chat/new")
     } catch { /* silent */ }
-  }, [qc])
+  }, [qc, activeSessionId, router])
 
   // Sort newest-first before grouping so new chats appear at the top of their group
   const sorted = [...(sessions ?? [])].sort(
