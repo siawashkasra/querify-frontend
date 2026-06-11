@@ -8,12 +8,14 @@ import { formatDistanceToNow } from "date-fns"
 import { query as queryApi } from "@/lib/api"
 import { useAppStore } from "@/store/appStore"
 import { cn } from "@/lib/cn"
+import { useChatStore } from "@/store/chatStore"
 import type { ChatSession } from "@/types"
 
 export const SessionSidebar = () => {
   const params = useParams()
   const activeSessionId = params?.sessionId as string | undefined
   const { activeConnectionId } = useAppStore()
+  const sessionTitles = useChatStore((s) => s.sessionTitles)
 
   const { data: sessions } = useQuery<ChatSession[]>({
     queryKey: ["sessions", activeConnectionId],
@@ -50,7 +52,7 @@ export const SessionSidebar = () => {
               "font-medium truncate leading-tight",
               activeSessionId === s.id ? "text-brand" : "text-[var(--text)]"
             )}>
-              {(s.title ?? "Untitled chat").slice(0, 40)}
+              {(sessionTitles[s.id] ?? s.title ?? "Untitled chat").slice(0, 40)}
             </span>
             <span className="text-[var(--text-muted)]">
               {formatDistanceToNow(new Date(s.last_active_at), { addSuffix: true })}

@@ -1,6 +1,7 @@
 "use client"
 
 import type { AnswerCell, AnswerSection } from "@/types"
+import { CellToolbar } from "./CellToolbar"
 import { ChartCell } from "./ChartCell"
 import { ComparisonCell } from "./ComparisonCell"
 import { InsightsCell } from "./InsightsCell"
@@ -11,10 +12,7 @@ import { TitleCell } from "./TitleCell"
 
 // ── Cell dispatcher ───────────────────────────────────────────────────────────
 
-function CellRenderer({ cell }: { cell: AnswerCell }) {
-  if (cell.status === "running") {
-    return <div className="h-8 bg-gray-100 dark:bg-gray-800 rounded animate-pulse mb-4" />
-  }
+function CellInner({ cell }: { cell: AnswerCell }) {
   switch (cell.kind) {
     case "title":      return <TitleCell cell={cell} />
     case "metrics":    return <MetricsCell cell={cell} />
@@ -27,9 +25,21 @@ function CellRenderer({ cell }: { cell: AnswerCell }) {
   }
 }
 
+function CellRenderer({ cell, messageId }: { cell: AnswerCell; messageId?: string }) {
+  if (cell.status === "running") {
+    return <div className="h-8 bg-gray-100 dark:bg-gray-800 rounded animate-pulse mb-4" />
+  }
+  return (
+    <div className="relative group">
+      <CellToolbar cell={cell} messageId={messageId} />
+      <CellInner cell={cell} />
+    </div>
+  )
+}
+
 // ── Section ───────────────────────────────────────────────────────────────────
 
-function SectionView({ section }: { section: AnswerSection }) {
+function SectionView({ section, messageId }: { section: AnswerSection; messageId?: string }) {
   const order = section.layout ?? section.cells.map((c) => c.id)
   const cellById = Object.fromEntries(section.cells.map((c) => [c.id, c]))
   const orderedCells = order.flatMap((id) => (cellById[id] ? [cellById[id]] : []))
@@ -51,7 +61,7 @@ function SectionView({ section }: { section: AnswerSection }) {
         </div>
       ))}
       {orderedCells.map((cell) => (
-        <CellRenderer key={cell.id} cell={cell} />
+        <CellRenderer key={cell.id} cell={cell} messageId={messageId} />
       ))}
     </section>
   )
@@ -63,16 +73,17 @@ interface Props {
   sections: AnswerSection[]
   followUps?: string[]
   completionText?: string | null
+  messageId?: string
   onFollowUp?: (q: string) => void
 }
 
-export function SessionCanvas({ sections, followUps, completionText, onFollowUp }: Props) {
+export function SessionCanvas({ sections, followUps, completionText, messageId, onFollowUp }: Props) {
   if (!sections.length) return null
 
   return (
     <div className="w-full max-w-3xl mx-auto px-4 py-6">
       {sections.map((section) => (
-        <SectionView key={section.id} section={section} />
+        <SectionView key={section.id} section={section} messageId={messageId} />
       ))}
       {completionText && (
         <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">{completionText}</p>
