@@ -1,7 +1,6 @@
 "use client"
 
-// ChatCanvas — Chat Engine v2 (E12).
-// Replaces MessageThread + StreamingAnalysis + ResponseRenderer + AnalyticalResponseCard.
+// ChatCanvas — Chat Engine v2 unified renderer.
 //
 // Rendering priority per assistant message:
 //   1. msg.document (live v2 or rehydrated from answer_document)  → SessionCanvas
@@ -13,8 +12,8 @@
 import { useRef, useEffect, useCallback } from "react"
 import { format } from "date-fns"
 import { SessionCanvas } from "@/components/chat/canvas/SessionCanvas"
+import { LegacyAnswer } from "@/components/chat/LegacyAnswer"
 import ResultCard from "@/components/chat/ResultCard"
-import ErrorCard from "@/components/chat/ErrorCard"
 import TypingIndicator from "@/components/chat/TypingIndicator"
 import type { ThreadMessage } from "@/store/chatStore"
 import type { QueryResult } from "@/types"
@@ -123,36 +122,17 @@ export function ChatCanvas({ messages, connectionName, onFollowUp, onRetry }: Pr
             )
           }
 
-          // 3. Error
-          if (msg.error || msg.errorType) {
+          // 3+4. Error or legacy result — LegacyAnswer is the single pre-v2 renderer
+          if (msg.error || msg.errorType || msg.result) {
             return (
               <div key={msg.id} className="px-4">
-                <ErrorCard
-                  errorType={msg.errorType}
-                  errorDetail={msg.errorDetail}
-                  onRetry={
-                    msg.retryPrompt && onFollowUp ? () => onFollowUp(msg.retryPrompt!)
-                    : onRetry && prevUser?.prompt ? () => onRetry(prevUser.prompt!) : undefined
-                  }
-                  retryLabel={msg.retryPrompt ? "Run on last 30 days" : undefined}
-                  onRephrase={onFollowUp ? () => onFollowUp("") : undefined}
+                <LegacyAnswer
+                  msg={msg}
+                  prevPrompt={prevUser?.prompt}
+                  connectionName={connectionName}
+                  onFollowUp={onFollowUp}
+                  onRetry={onRetry}
                 />
-              </div>
-            )
-          }
-
-          // 4. Legacy result (no v2 document — history messages pre-E1, or panel_message)
-          if (msg.result) {
-            return (
-              <div key={msg.id} className="px-4">
-                <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm px-6 py-5">
-                  <ResultCard
-                    result={msg.result}
-                    prompt={prevUser?.prompt}
-                    connectionName={connectionName}
-                    onFollowUp={onFollowUp ? () => onFollowUp("") : undefined}
-                  />
-                </div>
               </div>
             )
           }
