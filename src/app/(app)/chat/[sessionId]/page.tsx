@@ -46,6 +46,13 @@ export default function ChatPage({ params }: ChatPageProps) {
     addPanelLoadingMessage,
     resolvePanelMessage,
     rejectPanelMessage,
+    v2SectionStart,
+    v2CellComplete,
+    v2CellUpdate,
+    v2Layout,
+    v2AgentNote,
+    v2SessionTitle,
+    v2DocDone,
   } = useChatStore()
   const { getSignal, cancel } = useAbortController()
   const plan = usePlan()
@@ -156,7 +163,7 @@ export default function ChatPage({ params }: ChatPageProps) {
       const loadingId = addLoadingMessage(sessionId)
       try {
         await runStreaming(
-          { setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding, resolveMessage, rejectMessage },
+          { setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding, resolveMessage, rejectMessage, v2SectionStart, v2CellComplete, v2CellUpdate, v2Layout, v2AgentNote, v2SessionTitle, v2DocDone },
           sessionId, loadingId,
           { prompt, session_id: sessionId, connection_id: activeConnectionId },
           getSignal(),

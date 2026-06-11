@@ -233,6 +233,59 @@ export interface QueryResult {
   retry_prompt?: string | null
 }
 
+// ── Chat Engine v2 — Analytical Canvas ────────────────────────────────────────
+
+export type AnswerCellKind = "title" | "metrics" | "chart" | "table" | "comparison" | "narrative" | "insights"
+export type AnswerCellStatus = "running" | "complete" | "error"
+export type FollowUpKind = "extend" | "refine" | "quick"
+export type AgentNoteKind = "period_alignment" | "defining_filter" | "clarify_resolution" | "fallback_notice"
+
+export interface AnswerCell {
+  id: string
+  name: string
+  kind: AnswerCellKind
+  payload: Record<string, unknown>
+  status: AnswerCellStatus
+  section_id: string
+  order: number
+}
+
+export interface AgentNote {
+  kind: AgentNoteKind
+  text: string
+}
+
+export interface AnswerSection {
+  id: string
+  question: string
+  title?: string | null
+  cells: AnswerCell[]
+  agent_notes?: AgentNote[]
+  layout?: string[]   // ordered cell ids after layout event
+}
+
+export interface AnswerDocument {
+  sections: AnswerSection[]
+  follow_ups?: string[]
+  completion_text?: string | null
+  confidence?: { level: string; score?: number; caveats?: string[] } | null
+}
+
+// v2 SSE events
+export interface V2SectionStartEvent { type: "section_start"; protocol_version: 2; section_id: string; question: string }
+export interface V2CellStartEvent { type: "cell_start"; protocol_version: 2; id: string; name: string; kind: AnswerCellKind; section_id: string }
+export interface V2CellCompleteEvent { type: "cell_complete"; protocol_version: 2; cell: AnswerCell }
+export interface V2CellUpdateEvent { type: "cell_update"; protocol_version: 2; cell: AnswerCell }
+export interface V2LayoutEvent { type: "layout"; protocol_version: 2; section_id: string; order: string[] }
+export interface V2AgentNoteEvent { type: "agent_note"; protocol_version: 2; section_id: string; kind: AgentNoteKind; text: string }
+export interface V2SessionTitleEvent { type: "session_title"; protocol_version: 2; title: string }
+export interface V2DocDoneEvent { type: "doc_done"; protocol_version: 2; follow_ups?: string[]; confidence?: AnswerDocument["confidence"]; completion_text?: string | null }
+export interface V2PanelMessageEvent { type: "panel_message"; protocol_version: 2; text: string }
+
+export type V2Event =
+  | V2SectionStartEvent | V2CellStartEvent | V2CellCompleteEvent | V2CellUpdateEvent
+  | V2LayoutEvent | V2AgentNoteEvent | V2SessionTitleEvent | V2DocDoneEvent | V2PanelMessageEvent
+
 export type InsightType = "revenue_trend" | "new_users" | "churn_signal" | "top_performer" | "anomaly" | "recurring_question"
 export type InsightConfidence = "high" | "medium" | "low"
 

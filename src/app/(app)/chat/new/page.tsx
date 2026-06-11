@@ -27,7 +27,7 @@ function NewChatPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { activeConnectionId, setActiveConnection } = useAppStore()
-  const { threads, addUserMessage, addLoadingMessage, resolveMessage, rejectMessage, setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding, migrateThread } = useChatStore()
+  const { threads, addUserMessage, addLoadingMessage, resolveMessage, rejectMessage, setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding, migrateThread, v2SectionStart, v2CellComplete, v2CellUpdate, v2Layout, v2AgentNote, v2SessionTitle, v2DocDone } = useChatStore()
   const { getSignal, cancel } = useAbortController()
   const [loading, setLoading] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -58,7 +58,7 @@ function NewChatPage() {
       const resolvedSession = await ensureSession(activeConnectionId)
       if (resolvedSession !== sid) migrateThread(sid, resolvedSession)
       await runStreaming(
-        { setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding, resolveMessage, rejectMessage },
+        { setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding, resolveMessage, rejectMessage, v2SectionStart, v2CellComplete, v2CellUpdate, v2Layout, v2AgentNote, v2SessionTitle, v2DocDone },
         resolvedSession, loadingId,
         { prompt, session_id: resolvedSession, connection_id: activeConnectionId },
         getSignal(),

@@ -4,7 +4,7 @@
 // result (or an actionable error with a retry prompt).
 import { streamQuery, type StreamEvent } from "@/lib/streamQuery"
 import type { StreamFinding, StreamPlan } from "@/store/chatStore"
-import type { QueryResult } from "@/types"
+import type { AgentNote, AnswerCell, QueryResult } from "@/types"
 
 interface StoreActions {
   setMessageStage: (sessionId: string, id: string, stage: string) => void
@@ -13,6 +13,14 @@ interface StoreActions {
   addMessageFinding: (sessionId: string, id: string, finding: StreamFinding) => void
   resolveMessage: (sessionId: string, id: string, result: QueryResult) => void
   rejectMessage: (sessionId: string, id: string, error: string, errorType?: string | null, errorDetail?: string | null, retryPrompt?: string | null) => void
+  // v2 reducers
+  v2SectionStart: (sessionId: string, id: string, sectionId: string, question: string) => void
+  v2CellComplete: (sessionId: string, id: string, cell: AnswerCell) => void
+  v2CellUpdate: (sessionId: string, id: string, cell: AnswerCell) => void
+  v2Layout: (sessionId: string, id: string, sectionId: string, order: string[]) => void
+  v2AgentNote: (sessionId: string, id: string, sectionId: string, note: AgentNote) => void
+  v2SessionTitle: (sessionId: string, title: string) => void
+  v2DocDone: (sessionId: string, id: string, followUps: string[], completionText: string | null) => void
 }
 
 export async function runStreaming(
@@ -68,6 +76,35 @@ export async function runStreaming(
           break
         case "error":
           final = { ...e, status: "failed" }
+          break
+        // ── v2 events (protocol_version=2) ─────────────────────────────────
+        case "section_start":
+          if (e.protocol_version === 2)
+            store.v2SectionStart(sessionId, loadingId, e.section_id as string, e.question as string)
+          break
+        case "cell_complete":
+          if (e.protocol_version === 2)
+            store.v2CellComplete(sessionId, loadingId, e.cell as AnswerCell)
+          break
+        case "cell_update":
+          if (e.protocol_version === 2)
+            store.v2CellUpdate(sessionId, loadingId, e.cell as AnswerCell)
+          break
+        case "layout":
+          if (e.protocol_version === 2)
+            store.v2Layout(sessionId, loadingId, e.section_id as string, (e.order ?? []) as string[])
+          break
+        case "agent_note":
+          if (e.protocol_version === 2)
+            store.v2AgentNote(sessionId, loadingId, e.section_id as string, { kind: e.kind, text: e.text } as AgentNote)
+          break
+        case "session_title":
+          if (e.protocol_version === 2)
+            store.v2SessionTitle(sessionId, e.title as string)
+          break
+        case "doc_done":
+          if (e.protocol_version === 2)
+            store.v2DocDone(sessionId, loadingId, (e.follow_ups ?? []) as string[], (e.completion_text ?? null) as string | null)
           break
       }
     }, signal)

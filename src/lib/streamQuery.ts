@@ -7,6 +7,9 @@ import { useAuthStore } from "@/store/authStore"
 
 export interface StreamEvent {
   type: "stage" | "plan" | "result" | "sub_result" | "analysis" | "done" | "error" | "cancelled"
+    | "section_start" | "cell_start" | "cell_complete" | "cell_update"
+    | "layout" | "agent_note" | "session_title" | "doc_done" | "panel_message"
+  protocol_version?: number
   [key: string]: unknown
 }
 

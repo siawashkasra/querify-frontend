@@ -1,5 +1,5 @@
 import { create } from "zustand"
-import type { QueryResult } from "@/types"
+import type { AnswerCell, AnswerDocument, AnswerSection, AgentNote, QueryResult } from "@/types"
 
 // ── progressive analytical streaming (plan → findings as they land → synthesis)
 export interface StreamPlanItem {
@@ -38,6 +38,9 @@ export interface ThreadMessage {
   plan?: StreamPlan                    // the streamed analysis plan (analytical path)
   findings?: StreamFinding[]           // sub-results, appended as each query completes
   createdAt: Date
+  // v2 document model
+  document?: AnswerDocument            // live document being built; sections grow as cells arrive
+  sessionTitle?: string                // updated live via session_title event
 }
 
 export interface PanelMessage {
@@ -52,6 +55,7 @@ export interface PanelMessage {
 interface ChatState {
   threads: Record<string, ThreadMessage[]>
   panelMessages: Record<string, PanelMessage[]>
+  sessionTitles: Record<string, string>   // sessionId → live title
   addUserMessage: (sessionId: string, prompt: string) => string
   addLoadingMessage: (sessionId: string) => string
   resolveMessage: (sessionId: string, tempId: string, result: QueryResult) => void
@@ -67,14 +71,49 @@ interface ChatState {
   addPanelLoadingMessage: (sessionId: string) => string
   resolvePanelMessage: (sessionId: string, tempId: string, text: string) => void
   rejectPanelMessage: (sessionId: string, tempId: string, error: string) => void
+  // v2 document reducers
+  v2SectionStart: (sessionId: string, tempId: string, sectionId: string, question: string) => void
+  v2CellComplete: (sessionId: string, tempId: string, cell: AnswerCell) => void
+  v2CellUpdate: (sessionId: string, tempId: string, cell: AnswerCell) => void
+  v2Layout: (sessionId: string, tempId: string, sectionId: string, order: string[]) => void
+  v2AgentNote: (sessionId: string, tempId: string, sectionId: string, note: AgentNote) => void
+  v2SessionTitle: (sessionId: string, title: string) => void
+  v2DocDone: (sessionId: string, tempId: string, followUps: string[], completionText: string | null) => void
 }
 
 let _counter = 0
 const tempId = () => `tmp_${Date.now()}_${++_counter}`
 
+// ── v2 document helpers ───────────────────────────────────────────────────────
+
+function _updateSection(
+  doc: AnswerDocument,
+  sectionId: string,
+  updater: (sec: AnswerSection) => AnswerSection,
+): AnswerDocument {
+  return {
+    ...doc,
+    sections: doc.sections.map((s) => (s.id === sectionId ? updater(s) : s)),
+  }
+}
+
+function _updateMessageDoc(
+  messages: ThreadMessage[],
+  tempId: string,
+  updater: (doc: AnswerDocument) => AnswerDocument,
+): ThreadMessage[] {
+  return messages.map((m) => {
+    if (m.id !== tempId) return m
+    const doc = m.document ?? { sections: [] }
+    return { ...m, document: updater(doc) }
+  })
+}
+
+
 export const useChatStore = create<ChatState>((set) => ({
   threads: {},
   panelMessages: {},
+  sessionTitles: {},
 
   addUserMessage: (sessionId, prompt) => {
     const id = tempId()
@@ -225,6 +264,94 @@ export const useChatStore = create<ChatState>((set) => ({
         [sessionId]: (s.panelMessages[sessionId] ?? []).map((m) =>
           m.id === tempId ? { ...m, loading: false, error } : m
         ),
+      },
+    }))
+  },
+
+  // ── v2 document reducers ──────────────────────────────────────────────────
+
+  v2SectionStart: (sessionId, tempId, sectionId, question) => {
+    set((s) => ({
+      threads: {
+        ...s.threads,
+        [sessionId]: _updateMessageDoc(s.threads[sessionId] ?? [], tempId, (doc) => ({
+          ...doc,
+          sections: [...doc.sections, { id: sectionId, question, cells: [], agent_notes: [] }],
+        })),
+      },
+    }))
+  },
+
+  v2CellComplete: (sessionId, tempId, cell) => {
+    set((s) => ({
+      threads: {
+        ...s.threads,
+        [sessionId]: _updateMessageDoc(s.threads[sessionId] ?? [], tempId, (doc) =>
+          _updateSection(doc, cell.section_id, (sec) => ({
+            ...sec,
+            cells: sec.cells.some((c) => c.id === cell.id)
+              ? sec.cells.map((c) => (c.id === cell.id ? cell : c))
+              : [...sec.cells, cell],
+          }))
+        ),
+      },
+    }))
+  },
+
+  v2CellUpdate: (sessionId, tempId, cell) => {
+    set((s) => ({
+      threads: {
+        ...s.threads,
+        [sessionId]: _updateMessageDoc(s.threads[sessionId] ?? [], tempId, (doc) =>
+          _updateSection(doc, cell.section_id, (sec) => ({
+            ...sec,
+            cells: sec.cells.map((c) => (c.id === cell.id ? cell : c)),
+          }))
+        ),
+      },
+    }))
+  },
+
+  v2Layout: (sessionId, tempId, sectionId, order) => {
+    set((s) => ({
+      threads: {
+        ...s.threads,
+        [sessionId]: _updateMessageDoc(s.threads[sessionId] ?? [], tempId, (doc) =>
+          _updateSection(doc, sectionId, (sec) => ({ ...sec, layout: order }))
+        ),
+      },
+    }))
+  },
+
+  v2AgentNote: (sessionId, tempId, sectionId, note) => {
+    set((s) => ({
+      threads: {
+        ...s.threads,
+        [sessionId]: _updateMessageDoc(s.threads[sessionId] ?? [], tempId, (doc) =>
+          _updateSection(doc, sectionId, (sec) => ({
+            ...sec,
+            agent_notes: [...(sec.agent_notes ?? []), note],
+          }))
+        ),
+      },
+    }))
+  },
+
+  v2SessionTitle: (sessionId, title) => {
+    set((s) => ({
+      sessionTitles: { ...s.sessionTitles, [sessionId]: title },
+    }))
+  },
+
+  v2DocDone: (sessionId, tempId, followUps, completionText) => {
+    set((s) => ({
+      threads: {
+        ...s.threads,
+        [sessionId]: _updateMessageDoc(s.threads[sessionId] ?? [], tempId, (doc) => ({
+          ...doc,
+          follow_ups: followUps,
+          completion_text: completionText,
+        })),
       },
     }))
   },
