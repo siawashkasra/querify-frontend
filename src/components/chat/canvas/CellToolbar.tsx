@@ -3,8 +3,7 @@
 // CellToolbar — E10: hover toolbar for each cell (copy/SQL/expand/export)
 
 import { useState } from "react"
-import { Copy, Expand, Download, Check } from "lucide-react"
-import { cn } from "@/lib/cn"
+import { Copy, Download, Check } from "lucide-react"
 import type { AnswerCell } from "@/types"
 
 interface Props {

@@ -10,18 +10,18 @@ interface Props {
 
 export function ChartCell({ cell }: Props) {
   const config = cell.payload.config as ChartConfig | undefined
-  const columns = (cell.payload.columns as string[]) ?? []
-  const rawRows = (cell.payload.rows as unknown[][]) ?? []
 
   // Convert columnar [row[]] → Record<string, unknown>[] that QueryChart expects
   const rows = useMemo<Record<string, unknown>[]>(() => {
+    const columns = (cell.payload.columns as string[]) ?? []
+    const rawRows = (cell.payload.rows as unknown[][]) ?? []
     if (!columns.length) return []
     return rawRows.map((row) => {
       const obj: Record<string, unknown> = {}
       columns.forEach((col, i) => { obj[col] = row[i] })
       return obj
     })
-  }, [columns, rawRows])
+  }, [cell.payload])
 
   if (!config) return null
 
