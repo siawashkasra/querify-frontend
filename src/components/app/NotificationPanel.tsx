@@ -32,11 +32,11 @@ function AlertRow({ alert, onAck, connectionName }: { alert: ConnectionAlert; on
         <p className="text-sm font-semibold text-slate-800 leading-tight">{alert.title}</p>
         <p className="text-xs text-slate-500 mt-0.5 line-clamp-2">{alert.message}</p>
         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-          {connectionName && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-50 text-violet-700 border border-violet-200">{connectionName}</span>}
+          {connectionName && <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-violet-soft text-violet border border-violet-200">{connectionName}</span>}
           <span className="text-[11px] text-slate-400">{formatDistanceToNow(new Date(alert.created_at), { addSuffix: true })}</span>
         </div>
         {alert.action_label && alert.action_url && (
-          <a href={_safeActionUrl(alert.action_url)} className="mt-2 inline-flex items-center gap-1 text-xs text-violet-600 hover:text-violet-800 font-medium">
+          <a href={_safeActionUrl(alert.action_url)} className="mt-2 inline-flex items-center gap-1 text-xs text-violet hover:text-violet-800 font-medium">
             {alert.action_label} <ExternalLink className="w-3 h-3" />
           </a>
         )}
@@ -113,7 +113,7 @@ export function NotificationPanel() {
             <h3 className="font-semibold text-slate-800">Notifications</h3>
             <div className="flex items-center gap-2">
               {allAlerts.length > 0 && (
-                <button onClick={() => markAllMutation.mutate()} disabled={markAllMutation.isPending} className="text-xs text-violet-600 hover:text-violet-800 font-medium disabled:opacity-50">
+                <button onClick={() => markAllMutation.mutate()} disabled={markAllMutation.isPending} className="text-xs text-violet hover:text-violet-800 font-medium disabled:opacity-50">
                   Mark all read
                 </button>
               )}

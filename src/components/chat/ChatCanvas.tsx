@@ -16,6 +16,7 @@ import { ClarifyCard } from "@/components/chat/ClarifyCard"
 import { ReverifyCard } from "@/components/chat/ReverifyCard"
 import ResultCard from "@/components/chat/ResultCard"
 import TypingIndicator from "@/components/chat/TypingIndicator"
+import { stageMicrocopy } from "@/lib/stageMicrocopy"
 import type { ThreadMessage } from "@/store/chatStore"
 import type { QueryResult } from "@/types"
 
@@ -91,10 +92,10 @@ export function ChatCanvas({ messages, connectionName, connectionId, onFollowUp,
           if (msg.role === "user") {
             if (!msg.prompt) return null
             return (
-              <div key={msg.id} className="px-4 flex justify-end">
+              <div key={msg.id} className="px-4 flex justify-end mb-5">
                 <div
                   dir="auto"
-                  className="max-w-[70%] rounded-2xl bg-violet-600 text-white px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words shadow-sm"
+                  className="max-w-[68%] rounded-2xl rounded-br-[4px] bg-violet text-white px-4 py-2.5 text-[0.9375rem] leading-relaxed whitespace-pre-wrap break-words shadow-rest"
                 >
                   {msg.prompt}
                 </div>
@@ -119,8 +120,8 @@ export function ChatCanvas({ messages, connectionName, connectionId, onFollowUp,
                 {/* Skeleton while more sections are still streaming */}
                 {msg.loading && (
                   <div className="px-4 max-w-3xl mx-auto">
-                    <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded animate-pulse w-2/3 mb-2" />
-                    <div className="h-2 bg-gray-100 dark:bg-gray-800 rounded animate-pulse w-1/2" />
+                    <div className="h-2 shimmer rounded w-2/3 mb-2" />
+                    <div className="h-2 shimmer rounded w-1/2" />
                   </div>
                 )}
               </div>
@@ -134,19 +135,19 @@ export function ChatCanvas({ messages, connectionName, connectionId, onFollowUp,
             return (
               <div key={msg.id} className="px-4">
                 {hasPartial ? (
-                  <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm px-6 py-5">
+                  <div className="bg-surface border border-line rounded-card shadow-rest px-6 py-5">
                     <ResultCard
                       result={{ ...EMPTY_RESULT, ...partial } as QueryResult}
                       prompt={prevUser?.prompt}
                       connectionName={connectionName}
                     />
-                    <div className="mt-4 flex items-center gap-2 text-xs text-gray-400">
-                      <span className="h-1.5 w-1.5 rounded-full bg-violet-600 animate-pulse" />
-                      {msg.stage || "Analysing…"}
+                    <div className="mt-4 flex items-center gap-2 text-xs text-ink-dim">
+                      <span className="h-1.5 w-1.5 rounded-full bg-violet animate-pulse-ring" />
+                      {stageMicrocopy(msg.stage, connectionName)}
                     </div>
                   </div>
                 ) : (
-                  <TypingIndicator stage={msg.stage} />
+                  <TypingIndicator stage={msg.stage} connectionName={connectionName} />
                 )}
               </div>
             )

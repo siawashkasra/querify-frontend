@@ -86,7 +86,7 @@ function TenantSelector({ collapsed }: { collapsed: boolean }) {
     return (
       <div className="flex items-center justify-center py-2">
         <span title={currentTenant?.tenant_name ?? "Tenant"}>
-          <Building2 size={16} className="text-[var(--text-muted)]" />
+          <Building2 size={16} className="text-ink-dim" />
         </span>
       </div>
     )
@@ -96,16 +96,16 @@ function TenantSelector({ collapsed }: { collapsed: boolean }) {
     <div ref={ref} className="relative px-3 py-2">
       <button
         onClick={() => hasMultiple && setOpen((o) => !o)}
-        className={cn("flex items-center gap-2 w-full text-left rounded", hasMultiple ? "hover:bg-[var(--surface-2)] cursor-pointer" : "cursor-default")}
+        className={cn("flex items-center gap-2 w-full text-left rounded", hasMultiple ? "hover:bg-paper cursor-pointer" : "cursor-default")}
       >
-        <Building2 size={13} className="text-[var(--text-muted)] shrink-0" />
-        <span className="flex-1 text-xs font-medium text-[var(--text-dim)] truncate">
+        <Building2 size={13} className="text-ink-dim shrink-0" />
+        <span className="flex-1 text-xs font-medium text-ink-dim truncate">
           {currentTenant?.tenant_name ?? "Loading…"}
         </span>
-        {hasMultiple && <ChevronDown size={12} className={cn("text-[var(--text-muted)] shrink-0 transition-transform", open && "rotate-180")} />}
+        {hasMultiple && <ChevronDown size={12} className={cn("text-ink-dim shrink-0 transition-transform", open && "rotate-180")} />}
       </button>
       {open && hasMultiple && (
-        <div className="absolute left-2 right-2 top-full mt-1 z-50 rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-lg overflow-hidden">
+        <div className="absolute left-2 right-2 top-full mt-1 z-50 rounded-lg border border-line bg-surface shadow-lg overflow-hidden">
           {userTenants!.map((t) => {
             const isActive = t.tenant_id === tenantId
             const isLoading = switching === t.tenant_id
@@ -114,11 +114,11 @@ function TenantSelector({ collapsed }: { collapsed: boolean }) {
                 key={t.tenant_id}
                 onClick={() => handleSwitch(t.tenant_id)}
                 disabled={isActive || !!switching}
-                className={cn("flex items-center gap-2 w-full px-3 py-2 text-left text-xs transition-colors disabled:cursor-default", isActive ? "bg-[var(--surface-2)] text-brand font-medium" : "text-[var(--text-dim)] hover:bg-[var(--surface-2)]")}
+                className={cn("flex items-center gap-2 w-full px-3 py-2 text-left text-xs transition-colors disabled:cursor-default", isActive ? "bg-paper text-violet font-medium" : "text-ink-dim hover:bg-paper")}
               >
-                {isLoading ? <Loader2 size={11} className="animate-spin shrink-0" /> : isActive ? <Check size={11} className="shrink-0 text-brand" /> : <span className="w-[11px] shrink-0" />}
+                {isLoading ? <Loader2 size={11} className="animate-spin shrink-0" /> : isActive ? <Check size={11} className="shrink-0 text-violet" /> : <span className="w-[11px] shrink-0" />}
                 <span className="flex-1 truncate">{t.tenant_name}</span>
-                <span className="text-[10px] text-[var(--text-muted)] capitalize shrink-0">{t.role.replace("_", " ")}</span>
+                <span className="text-[10px] text-ink-dim capitalize shrink-0">{t.role.replace("_", " ")}</span>
               </button>
             )
           })}
@@ -154,20 +154,20 @@ function UserFooter({ collapsed }: { collapsed: boolean }) {
 
   if (collapsed) {
     return (
-      <button onClick={logout} title="Sign out" className="flex items-center justify-center w-full py-2 text-[var(--text-muted)] hover:text-danger transition-colors">
+      <button onClick={logout} title="Sign out" className="flex items-center justify-center w-full py-2 text-ink-dim hover:text-alert transition-colors">
         <LogOut size={15} />
       </button>
     )
   }
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2 rounded hover:bg-[var(--surface-2)] group transition-colors">
-      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-brand/10 text-brand text-[11px] font-bold select-none">{initials}</div>
+    <div className="flex items-center gap-2 px-3 py-2 rounded hover:bg-paper group transition-colors">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-violet/10 text-violet text-[11px] font-bold select-none">{initials}</div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs font-medium text-[var(--text)] truncate leading-tight">{profile?.name ?? "Account"}</p>
-        <p className="text-[10px] text-[var(--text-muted)] truncate leading-tight">{profile?.email ?? ""}</p>
+        <p className="text-xs font-medium text-ink truncate leading-tight">{profile?.name ?? "Account"}</p>
+        <p className="text-[10px] text-ink-dim truncate leading-tight">{profile?.email ?? ""}</p>
       </div>
-      <button onClick={logout} title="Sign out" className="shrink-0 p-1 rounded text-[var(--text-muted)] opacity-0 group-hover:opacity-100 hover:text-danger transition-all" aria-label="Sign out">
+      <button onClick={logout} title="Sign out" className="shrink-0 p-1 rounded text-ink-dim opacity-0 group-hover:opacity-100 hover:text-alert transition-all" aria-label="Sign out">
         <LogOut size={14} />
       </button>
     </div>
@@ -197,8 +197,8 @@ function SessionItem({ session, isActive, onDelete }: { session: ChatSession; is
         className={cn(
           "flex items-center gap-2 pl-2.5 pr-8 py-1.5 rounded text-[13px] transition-colors border-l-2",
           isActive
-            ? "bg-[var(--brand-light)] border-brand text-brand font-medium"
-            : "border-transparent text-[var(--text-dim)] hover:bg-white hover:text-[var(--text)]"
+            ? "bg-violet-soft border-violet text-violet font-medium"
+            : "border-transparent text-ink-dim hover:bg-surface hover:text-ink"
         )}
       >
         <span className="truncate flex-1 leading-tight">{title.slice(0, 50)}</span>
@@ -206,15 +206,15 @@ function SessionItem({ session, isActive, onDelete }: { session: ChatSession; is
       <div ref={menuRef} className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={(e) => { e.preventDefault(); setMenuOpen((o) => !o) }}
-          className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-dim)] hover:bg-[var(--surface-3)] transition-colors"
+          className="p-1 rounded text-ink-dim hover:text-ink-dim hover:bg-line transition-colors"
         >
           <MoreHorizontal size={12} />
         </button>
         {menuOpen && (
-          <div className="absolute right-0 top-full mt-0.5 z-50 rounded-lg border border-[var(--border)] bg-white shadow-lg overflow-hidden w-28">
+          <div className="absolute right-0 top-full mt-0.5 z-50 rounded-lg border border-line bg-surface shadow-lg overflow-hidden w-28">
             <button
               onClick={handleDelete}
-              className="flex items-center gap-2 w-full px-3 py-2 text-xs text-danger hover:bg-danger/5 transition-colors"
+              className="flex items-center gap-2 w-full px-3 py-2 text-xs text-alert hover:bg-alert/5 transition-colors"
             >
               <Trash2 size={11} />
               Delete
@@ -286,29 +286,29 @@ function SessionHistory({ activeSessionId }: { activeSessionId: string | undefin
   return (
     <div className="flex flex-col min-h-0 flex-1 overflow-y-auto">
       {/* Section header */}
-      <div className="flex items-center justify-between px-3 py-2 sticky top-0 bg-[var(--bg)] z-10">
+      <div className="flex items-center justify-between px-3 py-2 sticky top-0 bg-paper z-10">
         {searchOpen ? (
-          <div className="flex items-center gap-1 flex-1 bg-[var(--surface-2)] border border-[var(--border)] rounded px-2 py-1">
-            <Search size={11} className="text-[var(--text-muted)] shrink-0" />
+          <div className="flex items-center gap-1 flex-1 bg-paper border border-line rounded px-2 py-1">
+            <Search size={11} className="text-ink-dim shrink-0" />
             <input
               ref={searchRef}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Escape") { setSearchOpen(false); setSearchQuery("") } }}
               placeholder="Search chats…"
-              className="flex-1 bg-transparent text-xs text-[var(--text)] placeholder-[var(--text-muted)] outline-none"
+              className="flex-1 bg-transparent text-xs text-ink placeholder:text-ink-dim/70 outline-none"
               autoFocus
             />
-            <button onClick={() => { setSearchOpen(false); setSearchQuery("") }} className="text-[var(--text-muted)] hover:text-[var(--text-dim)]">
+            <button onClick={() => { setSearchOpen(false); setSearchQuery("") }} className="text-ink-dim hover:text-ink-dim">
               <X size={11} />
             </button>
           </div>
         ) : (
           <>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)]">Recent</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-ink-dim">Recent</span>
             <button
               onClick={() => { setSearchOpen(true); setTimeout(() => searchRef.current?.focus(), 50) }}
-              className="p-1 rounded text-[var(--text-muted)] hover:text-[var(--text-dim)] hover:bg-[var(--surface-2)] transition-colors"
+              className="p-1 rounded text-ink-dim hover:text-ink-dim hover:bg-paper transition-colors"
               title="Search chats"
             >
               <Search size={12} />
@@ -319,7 +319,7 @@ function SessionHistory({ activeSessionId }: { activeSessionId: string | undefin
 
       {/* Session groups */}
       {grouped.length === 0 && (
-        <p className="text-[11px] text-[var(--text-muted)] text-center py-6 px-3">
+        <p className="text-[11px] text-ink-dim text-center py-6 px-3">
           {searchQuery ? "No results" : "No chats yet"}
         </p>
       )}
@@ -333,7 +333,7 @@ function SessionHistory({ activeSessionId }: { activeSessionId: string | undefin
           <div key={group} className="flex flex-col">
             <button
               onClick={() => toggleGroup(group)}
-              className="flex items-center gap-1 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--text-muted)] hover:text-[var(--text-dim)] transition-colors select-none"
+              className="flex items-center gap-1 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-dim hover:text-ink-dim transition-colors select-none"
             >
               <ChevronDown size={10} className={cn("transition-transform shrink-0", isCollapsed && "-rotate-90")} />
               {group}
@@ -347,7 +347,7 @@ function SessionHistory({ activeSessionId }: { activeSessionId: string | undefin
                 {hasMore && (
                   <button
                     onClick={() => toggleShowMore(group)}
-                    className="px-3 py-1.5 text-[11px] text-[var(--text-muted)] hover:text-brand text-left transition-colors"
+                    className="px-3 py-1.5 text-[11px] text-ink-dim hover:text-violet text-left transition-colors"
                   >
                     Show {items.length - 5} more…
                   </button>
@@ -371,15 +371,15 @@ function EdgeToggle({ onClick, direction, label }: { onClick: () => void; direct
       className={cn(
         "absolute top-1/2 -translate-y-1/2 z-20",
         "flex items-center justify-center w-6 h-6 rounded-full",
-        "bg-[var(--surface-2)] border border-[var(--border-2)]",
-        "shadow-[0_2px_8px_rgba(0,0,0,0.2)]",
-        "hover:bg-[var(--surface-3)] transition-all duration-150",
+        "bg-paper border border-line",
+        "shadow-float",
+        "hover:bg-line transition-all duration-150",
         direction === "right" ? "right-0 translate-x-1/2" : "left-0 -translate-x-1/2"
       )}
     >
       {direction === "right"
-        ? <ChevronRight size={10} className="text-[var(--text-dim)]" />
-        : <ChevronLeft size={10} className="text-[var(--text-dim)]" />
+        ? <ChevronRight size={10} className="text-ink-dim" />
+        : <ChevronLeft size={10} className="text-ink-dim" />
       }
     </button>
   )
@@ -430,7 +430,7 @@ export const Sidebar = () => {
   return (
     <div
       className={cn(
-        "relative z-10 flex flex-col h-full bg-[var(--bg)] border-r border-[var(--border)]",
+        "relative z-10 flex flex-col h-full bg-paper border-r border-line",
         "transition-all duration-200 shrink-0",
         sidebarCollapsed ? "w-[56px]" : "w-[260px]"
       )}
@@ -446,15 +446,15 @@ export const Sidebar = () => {
       <div className="flex flex-col h-full w-full overflow-hidden">
 
         {/* Brand header */}
-        <div className={cn("flex items-center h-12 border-b border-[var(--border)] px-4 shrink-0", sidebarCollapsed && "justify-center px-0")}>
+        <div className={cn("flex items-center h-12 border-b border-line px-4 shrink-0", sidebarCollapsed && "justify-center px-0")}>
           {sidebarCollapsed
-            ? <span className="font-mono font-bold text-brand text-sm">Q</span>
-            : <span className="font-mono font-bold text-brand tracking-widest text-sm">QUERIFY</span>
+            ? <span className="font-display font-bold text-ink text-sm">Q</span>
+            : <span className="font-display font-bold text-ink tracking-[0.12em] text-sm">QUERIFY</span>
           }
         </div>
 
         {/* Tenant */}
-        <div className="border-b border-[var(--border)] shrink-0">
+        <div className="border-b border-line shrink-0">
           <TenantSelector collapsed={sidebarCollapsed} />
         </div>
 
@@ -464,7 +464,7 @@ export const Sidebar = () => {
             <button
               onClick={handleNewChat}
               disabled={!activeConnectionId || newChatLoading}
-              className="flex items-center justify-center w-full py-2 rounded-lg bg-brand text-white hover:bg-brand-dark disabled:opacity-40 transition-colors"
+              className="flex items-center justify-center w-full py-2 rounded-lg bg-violet text-white hover:brightness-[0.94] disabled:opacity-40 transition-colors"
               title="New Chat"
             >
               {newChatLoading ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
@@ -475,7 +475,7 @@ export const Sidebar = () => {
             <button
               onClick={handleNewChat}
               disabled={!activeConnectionId || newChatLoading}
-              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-brand text-white text-sm font-medium hover:bg-brand-dark disabled:opacity-40 transition-colors"
+              className="flex items-center justify-center gap-2 w-full py-2.5 rounded-lg bg-violet text-white text-sm font-medium hover:brightness-[0.94] disabled:opacity-40 transition-colors"
             >
               {newChatLoading ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
               New Chat
@@ -494,20 +494,22 @@ export const Sidebar = () => {
                 href={href}
                 title={sidebarCollapsed ? label : undefined}
                 className={cn(
-                  "flex items-center gap-3 rounded px-3 py-2 text-sm transition-colors relative",
+                  "flex items-center gap-3 rounded-ctrl px-3 py-2 text-[13px] font-medium transition-colors relative border-l-2",
                   sidebarCollapsed && "justify-center px-0 py-2.5",
-                  isActive ? "bg-brand text-white" : "text-[var(--text-dim)] hover:text-brand hover:bg-[var(--brand-light)]"
+                  isActive
+                    ? "bg-violet-soft text-violet border-violet"
+                    : "border-transparent text-ink-dim hover:text-ink hover:bg-paper"
                 )}
               >
                 <Icon size={16} className="shrink-0" />
                 {!sidebarCollapsed && <span className="flex-1">{label}</span>}
                 {showBadge && !sidebarCollapsed && (
-                  <span className="flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-danger text-white text-[10px] font-bold leading-none">
+                  <span className="flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-alert text-white text-[10px] font-bold leading-none">
                     {unreadCount > 99 ? "99+" : unreadCount}
                   </span>
                 )}
                 {showBadge && sidebarCollapsed && (
-                  <span className="absolute right-1 top-1 flex items-center justify-center h-3.5 w-3.5 rounded-full bg-danger" />
+                  <span className="absolute right-1 top-1 flex items-center justify-center h-3.5 w-3.5 rounded-full bg-alert" />
                 )}
               </Link>
             )
@@ -516,24 +518,24 @@ export const Sidebar = () => {
 
         {/* Session history — only when expanded */}
         {!sidebarCollapsed && (
-          <div className="flex flex-col flex-1 min-h-0 border-t border-[var(--border)] mt-1">
+          <div className="flex flex-col flex-1 min-h-0 border-t border-line mt-1">
             <SessionHistory activeSessionId={activeSessionId} />
           </div>
         )}
 
         {/* Footer */}
-        <div className={cn("px-2 py-3 border-t border-[var(--border)] flex flex-col gap-1 shrink-0", sidebarCollapsed && "px-0 items-center")}>
+        <div className={cn("px-2 py-3 border-t border-line flex flex-col gap-1 shrink-0", sidebarCollapsed && "px-0 items-center")}>
           {activeConnection ? (
-            <div className={cn("flex items-center gap-2 px-3 py-2 rounded bg-[var(--surface-2)]", sidebarCollapsed && "px-2 justify-center")}>
+            <div className={cn("flex items-center gap-2 px-3 py-2 rounded bg-paper", sidebarCollapsed && "px-2 justify-center")}>
               <span className="relative flex h-2 w-2 shrink-0">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-success" />
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-verify opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-verify" />
               </span>
-              {!sidebarCollapsed && <span className="text-xs text-[var(--text-dim)] truncate">{activeConnection.name}</span>}
+              {!sidebarCollapsed && <span className="text-xs text-ink-dim truncate">{activeConnection.name}</span>}
             </div>
           ) : (
             !sidebarCollapsed && can("connections:create") && (
-              <Link href="/settings/connections/new" className="flex items-center gap-2 px-3 py-2 rounded text-xs text-[var(--text-muted)] hover:text-brand hover:bg-[var(--brand-light)] transition-colors">
+              <Link href="/settings/connections/new" className="flex items-center gap-2 px-3 py-2 rounded text-xs text-ink-dim hover:text-violet hover:bg-violet-soft transition-colors">
                 Connect a database
               </Link>
             )

@@ -1,10 +1,15 @@
 import type { Metadata } from "next"
-import { Inter } from "next/font/google"
+import { Schibsted_Grotesk, Instrument_Sans, IBM_Plex_Mono } from "next/font/google"
 import "./globals.css"
 import Providers from "./providers"
 import { mergeRootMetadata } from "@/lib/seo"
 
-const inter = Inter({ subsets: ["latin"], display: "swap" })
+// U1 — the type trio. Display (characterful, 600/700 only), body (Instrument
+// Sans), data (IBM Plex Mono, tabular). Exposed as CSS variables the Tailwind
+// theme + globals.css map onto font-display / font-sans / font-data.
+const fontDisplay = Schibsted_Grotesk({ subsets: ["latin"], weight: ["600", "700"], variable: "--f-display", display: "swap" })
+const fontSans = Instrument_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--f-sans", display: "swap" })
+const fontData = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--f-data", display: "swap" })
 
 export const metadata: Metadata = mergeRootMetadata()
 
@@ -19,11 +24,11 @@ const posthogOrigin = (() => {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className="h-full scroll-smooth">
+    <html lang="en" className={`h-full scroll-smooth ${fontDisplay.variable} ${fontSans.variable} ${fontData.variable}`}>
       <head>
         <link rel="preconnect" href={posthogOrigin} crossOrigin="anonymous" />
       </head>
-      <body className={`min-h-full flex flex-col antialiased ${inter.className}`}>
+      <body className="min-h-full flex flex-col antialiased font-sans">
         <Providers>{children}</Providers>
       </body>
     </html>

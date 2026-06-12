@@ -34,7 +34,7 @@ export const ChatHeader = ({ sessionTitle, onTitleChange }: ChatHeaderProps) => 
   }
 
   return (
-    <div className="flex items-center justify-between h-11 px-4 border-b border-[var(--border)] bg-[var(--surface)] shrink-0">
+    <div className="flex items-center justify-between h-14 px-4 border-b border-line bg-surface shrink-0">
       <div className="flex items-center gap-2 min-w-0">
         {editing ? (
           <div className="flex items-center gap-1.5">
@@ -44,14 +44,14 @@ export const ChatHeader = ({ sessionTitle, onTitleChange }: ChatHeaderProps) => 
               onChange={(e) => setDraft(e.target.value)}
               onBlur={commitEdit}
               onKeyDown={(e) => { if (e.key === "Enter") commitEdit(); if (e.key === "Escape") setEditing(false) }}
-              className="text-sm font-medium bg-transparent border-b border-brand outline-none text-[var(--text)] w-48"
+              className="font-display text-[15px] font-semibold bg-transparent border-b border-violet outline-none text-ink w-48"
             />
-            <button onClick={commitEdit} className="text-success"><Check size={13} /></button>
+            <button onClick={commitEdit} className="text-verify" aria-label="Save title"><Check size={13} /></button>
           </div>
         ) : (
           <button
             onClick={startEdit}
-            className="flex items-center gap-1.5 group text-sm font-medium text-[var(--text)] hover:text-brand transition-colors min-w-0"
+            className="flex items-center gap-1.5 group font-display text-[15px] font-semibold text-ink hover:text-violet transition-colors min-w-0"
           >
             <span className="truncate">{sessionTitle ?? "New chat"}</span>
             <Pencil size={11} className="opacity-0 group-hover:opacity-60 shrink-0 transition-opacity" />
@@ -61,22 +61,22 @@ export const ChatHeader = ({ sessionTitle, onTitleChange }: ChatHeaderProps) => 
 
       <div className="flex items-center gap-2 shrink-0">
         {activeConn && (
-          <>
+          <span className="inline-flex items-center gap-1.5 text-xs text-ink-dim bg-paper rounded-pill px-2.5 py-1">
             <span className={cn(
               "h-2 w-2 rounded-full shrink-0",
-              activeConn.status === "active" ? "bg-success" : activeConn.status === "error" ? "bg-danger" : "bg-[var(--text-muted)]"
+              activeConn.status === "active" ? "bg-verify" : activeConn.status === "error" ? "bg-alert" : "bg-ink-dim"
             )} />
-            <span className="text-xs text-[var(--text-dim)] hidden sm:block">{activeConn.name}</span>
-            <Badge variant="default">{activeConn.db_type}</Badge>
-          </>
+            <span className="hidden sm:block">{activeConn.name}</span>
+            <Badge variant="neutral">{activeConn.db_type}</Badge>
+          </span>
         )}
         <button
           onClick={toggleRightPanel}
           className={cn(
-            "hidden md:flex items-center gap-1 px-2 py-1 rounded-md text-xs transition-colors",
+            "hidden md:flex items-center gap-1 px-2 py-1 rounded-ctrl text-xs transition-colors",
             showRightPanel
-              ? "bg-[var(--surface-3)] text-[var(--text-dim)]"
-              : "text-[var(--text-muted)] hover:text-[var(--text-dim)] hover:bg-[var(--surface-3)]"
+              ? "bg-violet-soft text-violet"
+              : "text-ink-dim hover:text-ink hover:bg-paper"
           )}
           title={showRightPanel ? "Hide analysis panel" : "Show analysis panel"}
         >

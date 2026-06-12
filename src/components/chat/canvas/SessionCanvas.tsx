@@ -2,6 +2,7 @@
 
 import { useRef, useEffect, useCallback } from "react"
 import type { AnswerCell, AnswerSection } from "@/types"
+import { Chip } from "@/components/ui/Chip"
 import { CellToolbar } from "./CellToolbar"
 import { ChartCell } from "./ChartCell"
 import { ComparisonCell } from "./ComparisonCell"
@@ -16,52 +17,52 @@ import { TitleCell } from "./TitleCell"
 function CellSkeleton({ kind }: { kind: AnswerCell["kind"] }) {
   switch (kind) {
     case "title":
-      return <div className="h-7 w-2/3 bg-gray-100 dark:bg-gray-800 rounded-lg animate-pulse mb-5" />
+      return <div className="h-7 w-2/3 shimmer rounded-ctrl mb-2" />
     case "metrics":
       return (
-        <div className="flex gap-4 mb-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-2">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="flex-1 h-16 bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+            <div key={i} className="h-[88px] shimmer rounded-card" />
           ))}
         </div>
       )
     case "chart":
-      return <div className="h-[280px] w-full bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse mb-4" />
+      return <div className="h-[280px] w-full shimmer rounded-card mb-2" />
     case "table":
       return (
-        <div className="mb-4 space-y-1">
-          <div className="h-8 w-full bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
+        <div className="mb-2 space-y-1">
+          <div className="h-8 w-full shimmer rounded-ctrl" />
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-7 w-full bg-gray-50 dark:bg-gray-800/50 rounded animate-pulse" />
+            <div key={i} className="h-7 w-full shimmer rounded-ctrl opacity-70" />
           ))}
         </div>
       )
     case "comparison":
       return (
-        <div className="mb-4 space-y-1">
+        <div className="mb-2 space-y-1">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-8 w-full bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
+            <div key={i} className="h-8 w-full shimmer rounded-ctrl" />
           ))}
         </div>
       )
     case "narrative":
       return (
-        <div className="mb-4 space-y-2">
-          <div className="h-3 w-full bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
-          <div className="h-3 w-5/6 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
-          <div className="h-3 w-4/6 bg-gray-100 dark:bg-gray-800 rounded animate-pulse" />
+        <div className="mb-2 space-y-2 max-w-[65ch]">
+          <div className="h-3 w-full shimmer rounded" />
+          <div className="h-3 w-5/6 shimmer rounded" />
+          <div className="h-3 w-4/6 shimmer rounded" />
         </div>
       )
     case "insights":
       return (
-        <div className="mb-4 space-y-2">
+        <div className="mb-2 space-y-2 border-l-2 border-violet/30 pl-4">
           {[1, 2].map((i) => (
-            <div key={i} className="h-8 w-full bg-gray-100 dark:bg-gray-800 rounded-xl animate-pulse" />
+            <div key={i} className="h-4 w-full shimmer rounded" />
           ))}
         </div>
       )
     default:
-      return <div className="h-8 bg-gray-100 dark:bg-gray-800 rounded animate-pulse mb-4" />
+      return <div className="h-8 shimmer rounded-ctrl mb-2" />
   }
 }
 
@@ -86,8 +87,9 @@ function CellRenderer({ cell, sectionQuestion, messageId, onRefine }: { cell: An
   if (cell.status === "running") {
     return <CellSkeleton kind={cell.kind} />
   }
+  // U7 — a completed cell crossfades up from its skeleton (150ms, 4px rise).
   return (
-    <div className="relative group">
+    <div className="relative group motion-safe:animate-cell-in">
       <CellToolbar cell={cell} messageId={messageId} onRefine={onRefine} />
       <CellInner cell={cell} sectionQuestion={sectionQuestion} messageId={messageId} />
     </div>
@@ -168,17 +170,17 @@ function SectionView({ section, messageId, onFollowUp }: { section: AnswerSectio
   })
   const titleIdx = orderedCells.findIndex((c) => c.kind === "title")
 
+  // TASK 1 — the fallback note is ONE quiet line (12px, caution, warning glyph),
+  // never a banner box.
   const NotesRow = metaNotes.length > 0 ? (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 -mt-2">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-2 mt-1.5">
       {metaNotes.map((note, i) => (
         <span
           key={i}
           dir="auto"
           className={
             "inline-flex items-center gap-1 text-xs " +
-            (note.kind === "fallback_notice"
-              ? "text-amber-600 dark:text-amber-400"
-              : "text-gray-400 dark:text-gray-500")
+            (note.kind === "fallback_notice" ? "text-caution" : "text-ink-dim")
           }
         >
           <span className="text-[10px] leading-none">{note.kind === "fallback_notice" ? "⚠" : "ℹ"}</span>
@@ -192,7 +194,8 @@ function SectionView({ section, messageId, onFollowUp }: { section: AnswerSectio
     <section className="mb-10">
       {/* When there's no title cell, the meta row sits at the top. */}
       {titleIdx < 0 && NotesRow}
-      <div ref={containerRef}>
+      {/* TASK 1 — cells breathe with a 24px rhythm. */}
+      <div ref={containerRef} className="flex flex-col gap-6">
         {orderedCells.map((cell, idx) => (
           <div key={cell.id} data-cell-id={cell.id}>
             <CellRenderer cell={cell} sectionQuestion={section.question} messageId={messageId} onRefine={onFollowUp} />
@@ -229,33 +232,30 @@ export function SessionCanvas({ sections, followUps, completionText, messageId, 
 
   return (
     <div className="w-full max-w-[860px] mx-auto px-4 sm:px-8 py-6">
-      {sections.map((section) => (
+      {sections.map((section, idx) => (
         <div
           key={section.id}
           ref={(el) => { if (el) sectionRefs.current.set(section.id, el) }}
+          className={idx > 0 ? "border-t border-line pt-10" : ""}
+          style={{ scrollMarginTop: 96 }}
         >
           <SectionView section={section} messageId={messageId} onFollowUp={onFollowUp} />
         </div>
       ))}
 
-      {/* Section footer: completion text, follow-up chips */}
+      {/* TASK 5 — section footer: one completion statement, then a FOLLOW UP
+          eyebrow with quiet chips. A single hairline above. */}
       {(completionText || (followUps && followUps.length > 0)) && (
-        <div className="mt-2 pt-4 border-t border-gray-100 dark:border-gray-800">
+        <div className="mt-6 pt-4 border-t border-line">
           {completionText && (
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 leading-relaxed">{completionText}</p>
+            <p dir="auto" className="text-[0.9375rem] text-ink leading-[1.7] mb-4 max-w-[65ch]">{completionText}</p>
           )}
           {followUps && followUps.length > 0 && (
             <div>
-              <p className="text-xs text-gray-400 dark:text-gray-500 mb-2 font-medium uppercase tracking-wide">Follow up</p>
+              <p className="text-[11px] text-ink-dim mb-2 font-medium uppercase tracking-wide">Follow up</p>
               <div className="flex flex-wrap gap-2">
                 {followUps.slice(0, 3).map((q, i) => (
-                  <button
-                    key={i}
-                    onClick={() => onFollowUp?.(q)}
-                    className="text-sm px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
-                  >
-                    {q}
-                  </button>
+                  <Chip key={i} onClick={() => onFollowUp?.(q)}>{q}</Chip>
                 ))}
               </div>
             </div>

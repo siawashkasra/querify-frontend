@@ -360,7 +360,7 @@ export default function OrgUsagePage() {
                           {member ? (
                             <div className={cn(
                               "w-6 h-6 rounded-full flex items-center justify-center text-white text-[10px] font-semibold shrink-0",
-                              `bg-violet-500`
+                              `bg-violet`
                             )}>
                               {(member.name?.charAt(0) || member.email.charAt(0)).toUpperCase()}
                             </div>

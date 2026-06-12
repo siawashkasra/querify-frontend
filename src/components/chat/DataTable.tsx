@@ -5,6 +5,7 @@ import { createColumnHelper, flexRender, getCoreRowModel, useReactTable } from "
 import { format as formatDate, parseISO, isValid } from "date-fns"
 import { cn } from "@/lib/cn"
 import { formatUnknownForUi } from "@/lib/formatDisplayValue"
+import { labelize } from "@/lib/labelize"
 
 interface DataTableProps {
   columns: string[]
@@ -27,19 +28,19 @@ function detectType(colName: string, rows: Record<string, unknown>[]): ColType {
 }
 
 function formatCell(value: unknown, type: ColType): React.ReactNode {
-  if (value == null) return <span className="text-[var(--text-muted)]">—</span>
+  if (value == null) return <span className="text-ink-dim">—</span>
   switch (type) {
     case "number": {
       if (value != null && typeof value === "object") {
         const s = formatUnknownForUi(value)
-        return s.length > 40 ? <span className="font-mono" title={s}>{s.slice(0, 40)}…</span> : <span className="font-mono">{s}</span>
+        return s.length > 40 ? <span className="font-data tabular-nums" title={s}>{s.slice(0, 40)}…</span> : <span className="font-data tabular-nums">{s}</span>
       }
       const n = typeof value === "number" ? value : Number(value)
       if (Number.isNaN(n)) {
         const s = formatUnknownForUi(value)
-        return s.length > 40 ? <span className="font-mono" title={s}>{s.slice(0, 40)}…</span> : <span className="font-mono">{s || "—"}</span>
+        return s.length > 40 ? <span className="font-data tabular-nums" title={s}>{s.slice(0, 40)}…</span> : <span className="font-data tabular-nums">{s || "—"}</span>
       }
-      return <span className="font-mono">{n.toLocaleString("en-US", { maximumFractionDigits: 4 })}</span>
+      return <span className="font-data tabular-nums">{n.toLocaleString("en-US", { maximumFractionDigits: 4 })}</span>
     }
     case "date": {
       if (value != null && typeof value === "object") {
@@ -56,7 +57,7 @@ function formatCell(value: unknown, type: ColType): React.ReactNode {
       }
       const b = value === true || value === "true"
       return (
-        <span className={cn("inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium", b ? "bg-success-bg text-success" : "bg-[var(--surface-3)] text-[var(--text-muted)]")}>
+        <span className={cn("inline-flex px-1.5 py-0.5 rounded-pill text-[10px] font-medium", b ? "bg-verify/12 text-verify" : "bg-line/60 text-ink-dim")}>
           {b ? "true" : "false"}
         </span>
       )
@@ -71,14 +72,6 @@ function formatCell(value: unknown, type: ColType): React.ReactNode {
   }
 }
 
-function humanize(col: string): string {
-  return col
-    .replace(/_id$/i, "")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase())
-    .trim() || col
-}
-
 const columnHelper = createColumnHelper<Record<string, unknown>>()
 
 export const DataTable = ({ columns, rows }: DataTableProps) => {
@@ -89,7 +82,7 @@ export const DataTable = ({ columns, rows }: DataTableProps) => {
     () => visibleCols.map((col) =>
       columnHelper.accessor((row) => row[col], {
         id: col,
-        header: humanize(col),
+        header: labelize(col),
         cell: (info) => formatCell(info.getValue(), types[col]),
       })
     ),
@@ -100,17 +93,17 @@ export const DataTable = ({ columns, rows }: DataTableProps) => {
   const table = useReactTable({ data: rows, columns: tableColumns, getCoreRowModel: getCoreRowModel() })
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
-        <table className="w-full text-xs">
+    <div className="flex flex-col gap-1.5">
+      <div className="overflow-x-auto rounded-card border border-line bg-surface">
+        <table className="w-full text-[13px] border-collapse">
           <thead>
             {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id} className="border-b border-[var(--border)] bg-[var(--surface)]">
+              <tr key={hg.id}>
                 {hg.headers.map((header) => (
                   <th
                     key={header.id}
                     className={cn(
-                      "px-3 py-2 font-medium text-[var(--text-dim)] whitespace-nowrap select-none",
+                      "px-3 h-10 text-[11px] font-medium uppercase tracking-wide text-ink-dim whitespace-nowrap select-none bg-paper border-b border-line",
                       types[header.id] === "number" ? "text-right" : "text-left"
                     )}
                   >
@@ -121,14 +114,15 @@ export const DataTable = ({ columns, rows }: DataTableProps) => {
             ))}
           </thead>
           <tbody>
-            {table.getRowModel().rows.map((row, i) => (
-              <tr key={row.id} className={cn("border-b border-[var(--border)] last:border-0", i % 2 === 0 ? "bg-[var(--surface-2)]" : "bg-white")}>
+            {table.getRowModel().rows.map((row) => (
+              <tr key={row.id} className="border-b border-line last:border-0 hover:bg-paper transition-colors">
                 {row.getVisibleCells().map((cell) => (
                   <td
                     key={cell.id}
+                    dir={types[cell.column.id] === "number" ? undefined : "auto"}
                     className={cn(
-                      "px-3 py-1.5 text-[var(--text)] whitespace-nowrap",
-                      types[cell.column.id] === "number" && "text-right font-mono"
+                      "px-3 h-10 text-ink whitespace-nowrap",
+                      types[cell.column.id] === "number" && "text-right font-data tabular-nums"
                     )}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -140,7 +134,7 @@ export const DataTable = ({ columns, rows }: DataTableProps) => {
         </table>
       </div>
       {rows.length >= 5 && (
-        <p className="text-[10px] text-[var(--text-muted)] pl-1">Showing first {rows.length} rows</p>
+        <p className="text-[11px] text-ink-dim pl-1">Showing first {rows.length.toLocaleString()} rows</p>
       )}
     </div>
   )

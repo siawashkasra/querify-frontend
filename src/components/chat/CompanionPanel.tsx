@@ -2,11 +2,38 @@
 
 // CompanionPanel — Chat Engine v2 (E8 complete).
 // Driven by agentFeed — maps 1:1 to real SSE events. Zero synthetic rows.
+// U6 — a calm activity ledger: violet question chips, ink decisions, mono Ran-
+// rows ticking to green checks, a card completion message. Panel is ink-dim by
+// default; only question chips and interactive elements carry violet.
 
 import { useState, useRef, useEffect, type KeyboardEvent } from "react"
 import { ChevronDown, ChevronRight, ArrowUp, Info, AlertCircle, Check, Loader2, Copy, RotateCcw } from "lucide-react"
 import { cn } from "@/lib/cn"
+import { labelize } from "@/lib/labelize"
 import type { AgentFeedItem, PanelMessage } from "@/store/chatStore"
+
+// ── Typewriter (panel completion only) ────────────────────────────────────────
+// U7 — the ONLY typewriter in the product. Canvas cells arrive composed; the
+// panel summary types while the canvas stands finished. 18ms/char, instant under
+// reduced-motion.
+function Typewriter({ text }: { text: string }) {
+  const [n, setN] = useState(0)
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setN(text.length)
+      return
+    }
+    setN(0)
+    const id = setInterval(() => {
+      setN((prev) => {
+        if (prev >= text.length) { clearInterval(id); return prev }
+        return prev + 1
+      })
+    }, 18)
+    return () => clearInterval(id)
+  }, [text])
+  return <>{text.slice(0, n)}</>
+}
 
 // ── Feed row renderers ────────────────────────────────────────────────────────
 
@@ -15,7 +42,7 @@ function FeedRow({ item }: { item: AgentFeedItem }) {
     case "question":
       return (
         <div className="flex justify-end mb-2">
-          <div className="bg-violet-600 text-white text-xs rounded-2xl rounded-tr-sm px-3 py-1.5 max-w-[85%]">
+          <div className="bg-violet text-white text-[13px] rounded-2xl rounded-br-[4px] px-3 py-1.5 max-w-[85%]">
             {item.text}
           </div>
         </div>
@@ -24,33 +51,33 @@ function FeedRow({ item }: { item: AgentFeedItem }) {
       return (
         <div className="flex gap-2 items-start mb-1.5">
           {item.kind === "fallback_notice" ? (
-            <AlertCircle size={11} className="text-amber-500 flex-shrink-0 mt-0.5" />
+            <AlertCircle size={11} className="text-caution flex-shrink-0 mt-0.5" />
           ) : (
-            <Info size={11} className="text-blue-500 flex-shrink-0 mt-0.5" />
+            <span className="h-1.5 w-1.5 rounded-full bg-violet flex-shrink-0 mt-1.5" />
           )}
-          <span className="text-[11px] text-gray-600 dark:text-gray-400 leading-snug">{item.text}</span>
+          <span className="text-[13px] text-ink leading-snug">{item.text}</span>
         </div>
       )
     case "cell":
       return (
         <div className="flex items-center gap-2 mb-1">
           {item.status === "running" ? (
-            <Loader2 size={10} className="text-violet-500 animate-spin flex-shrink-0" />
+            <Loader2 size={12} className="text-violet animate-spin flex-shrink-0" />
           ) : item.status === "complete" ? (
-            <Check size={10} className="text-green-500 flex-shrink-0" />
+            <Check size={12} className="text-verify flex-shrink-0" />
           ) : (
-            <span className="w-2.5 h-2.5 rounded-full bg-red-400 flex-shrink-0" />
+            <span className="w-2.5 h-2.5 rounded-full bg-alert flex-shrink-0" />
           )}
-          <span className="text-[11px] font-mono text-gray-500 dark:text-gray-400">
-            Ran: {item.name}
+          <span className="text-[12px] font-data text-ink-dim">
+            Ran: {labelize(item.name)}
           </span>
         </div>
       )
     case "layout":
       return (
         <div className="flex items-center gap-2 mb-1">
-          <Check size={10} className="text-gray-400 flex-shrink-0" />
-          <span className="text-[11px] font-mono text-gray-400 dark:text-gray-500">Ran set layout</span>
+          <Check size={12} className="text-ink-dim flex-shrink-0" />
+          <span className="text-[12px] font-data text-ink-dim">Ran set layout</span>
         </div>
       )
     default:
@@ -67,7 +94,7 @@ interface SectionGroupProps {
   onRetry?: (question: string) => void
 }
 
-function SectionGroup({ sectionId, items, isActive, onRetry }: SectionGroupProps) {
+function SectionGroup({ items, isActive, onRetry }: SectionGroupProps) {
   const [open, setOpen] = useState(isActive)
 
   useEffect(() => { if (isActive) setOpen(true) }, [isActive])
@@ -107,50 +134,50 @@ function SectionGroup({ sectionId, items, isActive, onRetry }: SectionGroupProps
   }
 
   return (
-    <div className="border-b border-gray-100 dark:border-gray-800 last:border-0">
+    <div className="border-b border-line last:border-0">
       <button
-        className="flex items-center gap-2 w-full px-4 py-2.5 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+        className="flex items-center gap-2 w-full px-4 py-2.5 text-left hover:bg-surface transition-colors"
         onClick={() => setOpen((o) => !o)}
       >
         {open ? (
-          <ChevronDown size={13} className="text-gray-400 flex-shrink-0" />
+          <ChevronDown size={13} className="text-ink-dim flex-shrink-0" />
         ) : (
-          <ChevronRight size={13} className="text-gray-400 flex-shrink-0" />
+          <ChevronRight size={13} className="text-ink-dim flex-shrink-0" />
         )}
-        <span className="text-xs font-medium text-gray-700 dark:text-gray-300 truncate flex-1">
+        <span className="text-[13px] font-medium text-ink truncate flex-1">
           {title}
         </span>
         {!open && totalCells > 0 && (
-          <span className="text-[10px] text-gray-400 flex-shrink-0">{totalCells} cells</span>
+          <span className="text-[11px] text-ink-dim flex-shrink-0">{totalCells} cell{totalCells !== 1 ? "s" : ""}</span>
         )}
         {open && runningCells > 0 && (
-          <Loader2 size={10} className="text-violet-500 animate-spin flex-shrink-0" />
+          <Loader2 size={10} className="text-violet animate-spin flex-shrink-0" />
         )}
       </button>
 
       {open && (
-        <div className="px-4 pb-3">
+        <div className="px-4 pb-3 flex flex-col gap-1">
           {feedItems.map((item, i) => <FeedRow key={i} item={item} />)}
 
           {completionItem && (
-            <div className="mt-2 bg-gray-50 dark:bg-gray-800/60 rounded-xl p-3">
-              <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">
-                {completionItem.text}
+            <div className="mt-2 bg-surface border border-line rounded-card shadow-rest p-3">
+              <p className="text-[13px] text-ink leading-relaxed whitespace-pre-wrap">
+                <Typewriter text={completionItem.text} />
               </p>
-              <div className="mt-1.5 flex items-center gap-3">
+              <div className="mt-2 flex items-center gap-3">
                 <button
                   onClick={handleCopyCompletion}
-                  className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  className="flex items-center gap-1 text-[11px] text-ink-dim hover:text-ink transition-colors"
                 >
-                  {copied ? <Check size={9} /> : <Copy size={9} />}
+                  {copied ? <Check size={10} /> : <Copy size={10} />}
                   {copied ? "Copied" : "Copy"}
                 </button>
                 {onRetry && questionItem && (
                   <button
                     onClick={() => onRetry(questionItem.text)}
-                    className="flex items-center gap-1 text-[10px] text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                    className="flex items-center gap-1 text-[11px] text-ink-dim hover:text-ink transition-colors"
                   >
-                    <RotateCcw size={9} />
+                    <RotateCcw size={10} />
                     Retry
                   </button>
                 )}
@@ -159,7 +186,7 @@ function SectionGroup({ sectionId, items, isActive, onRetry }: SectionGroupProps
           )}
 
           {!completionItem && completedCells > 0 && (
-            <p className="text-[10px] text-gray-400 dark:text-gray-500 mt-1">
+            <p className="text-[11px] text-ink-dim mt-1">
               {completedCells} of {totalCells} cells complete
             </p>
           )}
@@ -176,14 +203,14 @@ function PanelMessageBubble({ msg }: { msg: PanelMessage }) {
     <div className={cn("px-4 py-1.5", msg.role === "user" ? "text-right" : "text-left")}>
       <div
         className={cn(
-          "inline-block max-w-[85%] rounded-2xl px-3 py-2 text-xs",
+          "inline-block max-w-[85%] rounded-2xl px-3 py-2 text-[13px]",
           msg.role === "user"
-            ? "bg-violet-600 text-white"
-            : "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+            ? "bg-violet text-white rounded-br-[4px]"
+            : "bg-surface border border-line text-ink"
         )}
       >
         {msg.loading ? (
-          <span className="inline-flex gap-1">
+          <span className="inline-flex gap-1 text-ink-dim">
             <span className="animate-bounce">·</span>
             <span className="animate-bounce [animation-delay:0.1s]">·</span>
             <span className="animate-bounce [animation-delay:0.2s]">·</span>
@@ -254,37 +281,39 @@ function PanelComposer({
   }
 
   return (
-    <div className="relative border-t border-gray-200 dark:border-gray-800 px-3 py-2">
-      {/* @mention dropdown */}
+    <div className="relative border-t border-line px-3 py-2.5 bg-paper">
+      {/* @mention dropdown — floating card, cells grouped, kind glyphs */}
       {mentionMatches.length > 0 && (
-        <div className="absolute bottom-full left-3 right-3 mb-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg overflow-hidden z-20">
+        <div className="absolute bottom-full left-3 right-3 mb-1 bg-surface border border-line rounded-card shadow-float overflow-hidden z-20">
           {mentionMatches.map((c) => (
             <button
               key={c.name}
               onClick={() => insertMention(c.name)}
-              className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-xs text-gray-700 dark:text-gray-300 hover:bg-violet-50 dark:hover:bg-violet-950/40 transition-colors"
+              className="flex items-center gap-2 w-full px-3 py-1.5 text-left text-[12px] text-ink hover:bg-violet-soft transition-colors"
             >
-              <span className="text-gray-400 w-3 text-center">{KIND_GLYPH[c.kind] ?? "•"}</span>
-              <span className="font-mono truncate">{c.name}</span>
+              <span className="text-ink-dim w-3 text-center">{KIND_GLYPH[c.kind] ?? "•"}</span>
+              <span className="font-data truncate">{labelize(c.name)}</span>
             </button>
           ))}
         </div>
       )}
 
+      {/* TASK 3 — follow-up suggestions seeded above the panel composer */}
       {followUpSuggestions && followUpSuggestions.length > 0 && !value && (
         <div className="flex flex-col gap-1 mb-2">
           {followUpSuggestions.slice(0, 3).map((s, i) => (
             <button
               key={i}
               onClick={() => { if (!disabled) onSubmit(s) }}
-              className="text-left text-[11px] text-violet-600 dark:text-violet-400 hover:underline truncate"
+              className="text-left text-[13px] text-violet hover:underline truncate"
             >
               {s}
             </button>
           ))}
         </div>
       )}
-      <div className="flex items-end gap-2">
+      {/* panel composer variant: card, focus-within ring */}
+      <div className="flex items-end gap-2 rounded-[14px] border border-line bg-surface shadow-rest px-3 py-2.5 focus-within:border-violet focus-within:ring-4 focus-within:ring-violet/[0.14] transition-all">
         <textarea
           ref={taRef}
           rows={1}
@@ -293,13 +322,14 @@ function PanelComposer({
           onKeyDown={handleKeyDown}
           disabled={disabled}
           placeholder="Ask a follow-up about this analysis…"
-          className="flex-1 resize-none bg-gray-100 dark:bg-gray-800 rounded-xl px-3 py-2 text-xs outline-none text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500"
+          className="flex-1 resize-none bg-transparent text-[13px] outline-none text-ink placeholder:text-ink-dim/60 leading-relaxed disabled:opacity-50"
           style={{ maxHeight: 80 }}
         />
         <button
           onClick={submit}
           disabled={!value.trim() || disabled}
-          className="flex-shrink-0 flex items-center justify-center h-7 w-7 rounded-full bg-violet-600 text-white disabled:opacity-40 hover:bg-violet-700 transition-colors"
+          className="flex-shrink-0 flex items-center justify-center h-7 w-7 rounded-full bg-violet text-white disabled:bg-line disabled:text-ink-dim hover:brightness-[0.94] transition-[filter]"
+          aria-label="Send"
         >
           <ArrowUp size={12} />
         </button>
@@ -346,10 +376,10 @@ export function CompanionPanel({ agentFeed, panelMessages, onPanelMessage, isLoa
   const isEmpty = agentFeed.length === 0 && panelMessages.length === 0
 
   return (
-    <div className={cn("flex flex-col h-full bg-white dark:bg-gray-950 border-l border-gray-200 dark:border-gray-800", className)}>
-      <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800 shrink-0">
-        <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Analysis</h3>
-        <p className="text-[10px] text-gray-400 dark:text-gray-500">Decisions &amp; quick answers</p>
+    <div className={cn("flex flex-col h-full bg-paper border-l border-line", className)}>
+      <div className="px-4 py-3 border-b border-line shrink-0">
+        <h3 className="font-display text-[15px] font-semibold text-ink">Analysis</h3>
+        <p className="text-[12px] text-ink-dim">Decisions &amp; quick answers</p>
       </div>
 
       <div className="flex-1 overflow-y-auto">
@@ -372,7 +402,7 @@ export function CompanionPanel({ agentFeed, panelMessages, onPanelMessage, isLoa
         )}
 
         {isEmpty && (
-          <div className="flex items-center justify-center h-32 text-xs text-gray-400 dark:text-gray-500 text-center px-4 leading-relaxed">
+          <div className="flex items-center justify-center h-32 text-[12px] text-ink-dim text-center px-4 leading-relaxed">
             Agent decisions and quick answers appear here as your query runs.
           </div>
         )}

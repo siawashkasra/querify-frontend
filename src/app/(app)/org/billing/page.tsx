@@ -58,7 +58,7 @@ const PLANS: Record<PlanKey, {
     monthlyPrice: 79,
     annualMonthlyPrice: 66,
     accentClass: "border-violet-300",
-    badgeClass: "bg-violet-50 text-violet-700 border-violet-200",
+    badgeClass: "bg-violet-soft text-violet border-violet-200",
     features: ["Unlimited queries", "Unlimited connections", "10 seats", "365-day history", "API access + webhooks"],
     limits: { queries: "Unlimited", connections: "Unlimited", seats: "10", history: "365 days" },
   },
@@ -730,7 +730,7 @@ function OrgBillingPageContent() {
                 className={cn(
                   "px-3 py-1 rounded text-xs font-medium transition-colors capitalize",
                   billingPeriod === p
-                    ? "bg-[var(--bg)] shadow-sm text-[var(--text)]"
+                    ? "bg-[var(--bg)] shadow-rest text-[var(--text)]"
                     : "text-[var(--text-muted)] hover:text-[var(--text-dim)]"
                 )}
               >
@@ -753,7 +753,7 @@ function OrgBillingPageContent() {
                 key={plan}
                 className={cn(
                   "rounded-xl border p-4 flex flex-col gap-3 transition-shadow",
-                  isCurrent ? `${meta.accentClass} shadow-md` : "border-[var(--border)]"
+                  isCurrent ? `${meta.accentClass} shadow-float` : "border-[var(--border)]"
                 )}
               >
                 <div className="flex items-center justify-between">

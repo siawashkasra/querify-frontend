@@ -1,14 +1,20 @@
 "use client"
 
-// Tiny dependency-free SVG sparkline for KPI tiles.
+import { SPARK_COLOR, SPARK_OPACITY, SPARK_HEIGHT } from "@/lib/chartTheme"
+
+// U4 — Tiny dependency-free SVG sparkline. Texture, not a semaphore: ALWAYS one
+// quiet ink (--ink-dim at 60%), never colored by direction — the delta chip
+// carries the judgment. Last point is a hollow (dotted) dot. The legacy `color`
+// prop is accepted but intentionally ignored.
 interface SparklineProps {
   points: { value: number }[]
+  /** @deprecated sparklines are always ink-dim; this is ignored. */
   color?: string
   width?: number
   height?: number
 }
 
-export default function Sparkline({ points, color = "var(--brand)", width = 96, height = 28 }: SparklineProps) {
+export default function Sparkline({ points, width = 96, height = SPARK_HEIGHT }: SparklineProps) {
   const values = points.map((p) => p.value).filter((v) => Number.isFinite(v))
   if (values.length < 2) return <div style={{ width, height }} aria-hidden />
 
@@ -21,9 +27,10 @@ export default function Sparkline({ points, color = "var(--brand)", width = 96, 
   const [lx, ly] = coords[coords.length - 1]
 
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible" aria-hidden>
-      <path d={d} fill="none" stroke={color} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx={lx} cy={ly} r={2.5} fill={color} />
+    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible" aria-hidden
+      style={{ opacity: SPARK_OPACITY }}>
+      <path d={d} fill="none" stroke={SPARK_COLOR} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx={lx} cy={ly} r={2} fill="none" stroke={SPARK_COLOR} strokeWidth={1.5} />
     </svg>
   )
 }

@@ -37,7 +37,7 @@ export function LegacyAnswer({ msg, prevPrompt, connectionName, onFollowUp, onRe
 
   if (msg.result) {
     return (
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm px-6 py-5">
+      <div className="bg-white dark:bg-gray-900 border border-line dark:border-gray-800 rounded-2xl shadow-rest px-6 py-5">
         <ResultCard
           result={msg.result}
           prompt={prevPrompt}

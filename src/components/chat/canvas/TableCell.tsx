@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useCallback, useEffect } from "react"
+import { useState, useCallback, useEffect, useMemo } from "react"
 import {
   useReactTable,
   getCoreRowModel,
@@ -9,11 +9,12 @@ import {
   type ColumnDef,
   flexRender,
 } from "@tanstack/react-table"
-import { ChevronUp, ChevronDown, ChevronsUpDown, X, Plus } from "lucide-react"
+import { ChevronUp, ChevronDown, ChevronsUpDown, X, Plus, ArrowDownUp, ChevronLeft, ChevronRight, Download } from "lucide-react"
 import { useAuthStore } from "@/store/authStore"
 import type { AnswerCell } from "@/types"
 import { cn } from "@/lib/cn"
 import { formatByField } from "@/lib/formatNumber"
+import { labelize } from "@/lib/labelize"
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 const PAGE_SIZE = 50
@@ -35,6 +36,14 @@ function isNumeric(v: unknown): boolean {
   return typeof v === "number" || (typeof v === "string" && v !== "" && !isNaN(Number(v)))
 }
 
+function toCsv(cols: string[], rows: unknown[][]): string {
+  const esc = (v: unknown) => {
+    const s = v == null ? "" : String(v)
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+  }
+  return [cols.map(esc).join(","), ...rows.map((r) => r.map(esc).join(","))].join("\n")
+}
+
 interface Props {
   cell: AnswerCell
   messageId?: string
@@ -54,10 +63,9 @@ export function TableCell({ cell, messageId }: Props) {
   const [liveData, setLiveData] = useState<RowsResponse | null>(null)
   const [liveLoading, setLiveLoading] = useState(false)
 
-  // FIX 3c — during streaming the message id is a temp id (tmp_*) that the
-  // rows endpoint can't resolve. Interactive controls (filter/sort/pagination)
-  // stay disabled until the real message id is known (post doc_done / reload);
-  // preview rows render either way.
+  // FIX 3c — during streaming the message id is a temp id (tmp_*) the rows
+  // endpoint can't resolve; interactive controls stay disabled until the real
+  // id is known. Preview rows render either way.
   const isRealMessageId = Boolean(messageId && !messageId.startsWith("tmp_"))
   const hasEndpoint = isRealMessageId && Boolean(cell.id)
   const useLive = hasEndpoint && (sorting.length > 0 || filter !== null || page > 0)
@@ -97,24 +105,26 @@ export function TableCell({ cell, messageId }: Props) {
   const totalRows = liveData?.total_rows ?? totalFromPayload
   const currentPage = liveData?.page ?? page + 1
   const totalPages = Math.max(1, Math.ceil(totalRows / PAGE_SIZE))
-  const showingStart = (currentPage - 1) * PAGE_SIZE + 1
+  const showingStart = totalRows === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1
   const showingEnd = Math.min(currentPage * PAGE_SIZE, totalRows)
 
-  // Build TanStack columns from displayCols
+  // Build TanStack columns — HUMANIZED headers via labelize() (snake_case and
+  // raw table names are banned from headers).
   const columns: ColumnDef<Record<string, unknown>>[] = displayCols.map((col) => ({
     id: col,
     accessorKey: col,
-    header: col.replace(/_/g, " "),
+    header: labelize(col),
     cell: ({ getValue }) => {
       const v = getValue()
-      if (v == null) return <span className="text-gray-400">—</span>
+      if (v == null || v === "") return <span className="text-ink-dim">—</span>
       const num = isNumeric(v)
-      // FIX 3b — numeric cells render formatted (currency/percent/compact aware),
-      // never a raw float; the exact value is in the title tooltip.
+      // numeric cells render formatted (currency/percent/compact aware), never a
+      // raw float; the exact value lives in the title tooltip.
       const s = num ? formatByField(v, col) : String(v)
       return (
         <span
-          className={cn(num && "font-mono tabular-nums text-right block")}
+          dir={num ? undefined : "auto"}
+          className={cn(num ? "font-data tabular-nums text-right block text-ink" : "text-ink")}
           title={num ? String(v) : undefined}
         >
           {s}
@@ -123,12 +133,19 @@ export function TableCell({ cell, messageId }: Props) {
     },
   }))
 
-  // Convert rows (unknown[][]) to Record<string,unknown>[] for TanStack
   const tableData: Record<string, unknown>[] = displayRows.map((row) => {
     const obj: Record<string, unknown> = {}
     displayCols.forEach((col, i) => { obj[col] = (row as unknown[])[i] })
     return obj
   })
+
+  const numericCols = useMemo(() => {
+    const out = new Set<string>()
+    displayCols.forEach((col, i) => {
+      if (displayRows.some((r) => isNumeric((r as unknown[])[i]))) out.add(col)
+    })
+    return out
+  }, [displayCols, displayRows])
 
   const table = useReactTable({
     data: tableData,
@@ -144,35 +161,51 @@ export function TableCell({ cell, messageId }: Props) {
   })
 
   if (!displayCols.length) return null
+  // TASK 3 — a single scalar never reaches TableCell (MetricsCell owns it).
+  if (displayCols.length === 1 && displayRows.length <= 1) return null
+
+  const ghostBtn =
+    "inline-flex items-center gap-1 text-xs px-2 py-1 rounded-ctrl text-ink-dim hover:bg-violet-soft hover:text-violet transition-colors"
+
+  const handleExport = () => {
+    const csv = toCsv(displayCols, displayRows as unknown[][])
+    const blob = new Blob([csv], { type: "text/csv" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = `${labelize(cell.name) || "table"}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
-    <div className="mb-4">
-      {/* Controls */}
+    <div className="mb-2">
+      {/* Interaction chrome — ghost-weight until needed */}
       <div className="flex items-center gap-2 mb-2 flex-wrap">
         {hasEndpoint && (
           <div className="relative">
             <button
               onClick={() => { setFilterDraft(filter ?? { col: displayCols[0], val: "" }); setShowFilterPopover(true) }}
-              className="flex items-center gap-1 text-xs px-2 py-1 rounded border border-dashed border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:border-violet-400 hover:text-violet-600 transition-colors"
+              className={ghostBtn}
             >
-              <Plus size={10} />
-              Add Filter
+              <Plus size={12} />
+              Add filter
             </button>
             {showFilterPopover && filterDraft && (
-              <div className="absolute top-full left-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 z-20 w-64">
-                <p className="text-xs font-medium text-gray-700 dark:text-gray-300 mb-2">Filter rows</p>
+              <div className="absolute top-full left-0 mt-1 bg-surface border border-line rounded-card shadow-float p-3 z-20 w-64">
+                <p className="text-xs font-medium text-ink mb-2">Filter rows</p>
                 <select
                   value={filterDraft.col}
                   onChange={(e) => setFilterDraft({ ...filterDraft, col: e.target.value })}
-                  className="w-full text-xs border border-gray-200 dark:border-gray-700 rounded px-2 py-1 mb-2 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 outline-none"
+                  className="w-full text-xs border border-line rounded-ctrl px-2 py-1.5 mb-2 bg-surface text-ink outline-none focus:border-violet"
                 >
-                  {displayCols.map((c) => <option key={c} value={c}>{c.replace(/_/g, " ")}</option>)}
+                  {displayCols.map((c) => <option key={c} value={c}>{labelize(c)}</option>)}
                 </select>
                 <input
                   value={filterDraft.val}
                   onChange={(e) => setFilterDraft({ ...filterDraft, val: e.target.value })}
                   placeholder="contains…"
-                  className="w-full text-xs border border-gray-200 dark:border-gray-700 rounded px-2 py-1 mb-2 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 outline-none"
+                  className="w-full text-xs border border-line rounded-ctrl px-2 py-1.5 mb-2 bg-surface text-ink placeholder:text-ink-dim/70 outline-none focus:border-violet"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") { setFilter(filterDraft); setPage(0); setShowFilterPopover(false) }
                     if (e.key === "Escape") setShowFilterPopover(false)
@@ -181,14 +214,11 @@ export function TableCell({ cell, messageId }: Props) {
                 <div className="flex gap-2">
                   <button
                     onClick={() => { setFilter(filterDraft); setPage(0); setShowFilterPopover(false) }}
-                    className="flex-1 text-xs bg-violet-600 text-white rounded px-2 py-1 hover:bg-violet-700 transition-colors"
+                    className="flex-1 text-xs bg-violet text-white rounded-ctrl px-2 py-1.5 hover:brightness-[0.94] transition-[filter]"
                   >
                     Apply
                   </button>
-                  <button
-                    onClick={() => setShowFilterPopover(false)}
-                    className="text-xs text-gray-500 px-2 py-1"
-                  >
+                  <button onClick={() => setShowFilterPopover(false)} className="text-xs text-ink-dim px-2 py-1.5">
                     Cancel
                   </button>
                 </div>
@@ -196,44 +226,44 @@ export function TableCell({ cell, messageId }: Props) {
             )}
           </div>
         )}
+        {/* active filter chip (U2 selected style) */}
         {filter && (
-          <div className="flex items-center gap-1 text-xs bg-violet-50 dark:bg-violet-950 border border-violet-200 dark:border-violet-800 rounded-full px-2 py-0.5 text-violet-700 dark:text-violet-300">
-            <span>{filter.col.replace(/_/g, " ")}: {filter.val}</span>
-            <button onClick={() => { setFilter(null); setPage(0) }} className="hover:text-violet-900">
-              <X size={10} />
-            </button>
-          </div>
+          <span className="inline-flex items-center gap-1 text-xs rounded-pill bg-violet-soft text-violet px-2.5 py-0.5">
+            <span>{labelize(filter.col)}: {filter.val}</span>
+            <button onClick={() => { setFilter(null); setPage(0) }} className="hover:opacity-70"><X size={11} /></button>
+          </span>
         )}
+        {/* active sort chip */}
         {sorting.length > 0 && (
-          <div className="flex items-center gap-1 text-xs bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-full px-2 py-0.5 text-blue-700 dark:text-blue-300">
-            <span>Sorted: {sorting[0].id.replace(/_/g, " ")} {sorting[0].desc ? "↓" : "↑"}</span>
-            <button onClick={() => { setSorting([]); setPage(0) }} className="hover:text-blue-900">
-              <X size={10} />
-            </button>
-          </div>
+          <span className="inline-flex items-center gap-1 text-xs rounded-pill bg-violet-soft text-violet px-2.5 py-0.5">
+            <ArrowDownUp size={11} />
+            <span>{labelize(sorting[0].id)} {sorting[0].desc ? "↓" : "↑"}</span>
+            <button onClick={() => { setSorting([]); setPage(0) }} className="hover:opacity-70"><X size={11} /></button>
+          </span>
         )}
-        {liveLoading && <span className="text-xs text-gray-400 animate-pulse">Loading…</span>}
+        {liveLoading && <span className="text-xs text-ink-dim animate-pulse">Loading…</span>}
       </div>
 
-      {/* Table */}
-      <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
-        <table className="min-w-full text-sm">
+      {/* Table — a card; the table reads as content, not a widget */}
+      <div className="overflow-x-auto rounded-card border border-line bg-surface">
+        <table className="min-w-full text-[13px] border-collapse">
           <thead>
             {table.getHeaderGroups().map((hg) => (
-              <tr key={hg.id} className="bg-gray-50 dark:bg-gray-800">
+              <tr key={hg.id}>
                 {hg.headers.map((header, ci) => {
                   const sorted = header.column.getIsSorted()
+                  const isNum = numericCols.has(header.column.id)
                   return (
                     <th
                       key={header.id}
                       className={cn(
-                        "px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap select-none",
-                        ci === 0 && "sticky left-0 z-10 bg-gray-50 dark:bg-gray-800"
+                        "px-3 h-10 text-[11px] font-medium uppercase tracking-wide text-ink-dim whitespace-nowrap select-none cursor-pointer bg-paper sticky top-0 z-10 border-b border-line",
+                        isNum ? "text-right" : "text-left",
+                        ci === 0 && "left-0 z-20"
                       )}
                       onClick={header.column.getToggleSortingHandler()}
-                      style={{ cursor: "pointer" }}
                     >
-                      <span className="flex items-center gap-1">
+                      <span className={cn("flex items-center gap-1", isNum && "justify-end")}>
                         {flexRender(header.column.columnDef.header, header.getContext())}
                         {sorted === "asc" ? <ChevronUp size={10} /> : sorted === "desc" ? <ChevronDown size={10} /> : <ChevronsUpDown size={10} className="opacity-30" />}
                       </span>
@@ -243,30 +273,27 @@ export function TableCell({ cell, messageId }: Props) {
               </tr>
             ))}
           </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-700 bg-white dark:bg-gray-900">
+          <tbody>
             {tableData.length === 0 ? (
               <tr>
-                <td colSpan={displayCols.length} className="px-3 py-6 text-center text-sm text-gray-400 dark:text-gray-500">
+                <td colSpan={displayCols.length} className="px-3 py-8 text-center text-sm text-ink-dim">
                   No rows matched.
                   {filter && (
-                    <button
-                      onClick={() => { setFilter(null); setPage(0) }}
-                      className="ml-2 text-violet-600 hover:underline"
-                    >
-                      Clear filter
+                    <button onClick={() => { setFilter(null); setPage(0) }} className="ml-2 text-ink-dim hover:text-violet underline">
+                      Clear filters
                     </button>
                   )}
                 </td>
               </tr>
             ) : (
               table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="group/row hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                <tr key={row.id} className="group/row hover:bg-paper transition-colors border-b border-line last:border-0">
                   {row.getVisibleCells().map((cell, ci) => (
                     <td
                       key={cell.id}
                       className={cn(
-                        "px-3 py-2 text-gray-700 dark:text-gray-300 whitespace-nowrap",
-                        ci === 0 && "sticky left-0 z-10 bg-white dark:bg-gray-900 group-hover/row:bg-gray-50 dark:group-hover/row:bg-gray-800/50"
+                        "px-3 h-10 whitespace-nowrap",
+                        ci === 0 && "sticky left-0 z-10 bg-surface group-hover/row:bg-paper"
                       )}
                     >
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -279,27 +306,36 @@ export function TableCell({ cell, messageId }: Props) {
         </table>
       </div>
 
-      {/* Footer */}
-      <div className="flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-gray-400">
-        <span>
-          Showing {showingStart}–{showingEnd} of {totalRows.toLocaleString()} rows ({totalCols} column{totalCols !== 1 ? "s" : ""})
-        </span>
+      {/* Footer — Showing X–Y of Z rows · N columns */}
+      <div className="flex items-center justify-between mt-2 text-xs text-ink-dim">
+        <div className="flex items-center gap-3">
+          <span>
+            Showing {showingStart.toLocaleString()}–{showingEnd.toLocaleString()} of {totalRows.toLocaleString()} row{totalRows !== 1 ? "s" : ""} · {totalCols} column{totalCols !== 1 ? "s" : ""}
+          </span>
+          {displayRows.length > 0 && (
+            <button onClick={handleExport} className="inline-flex items-center gap-1 hover:text-violet transition-colors">
+              <Download size={11} /> Export CSV
+            </button>
+          )}
+        </div>
         {totalPages > 1 && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <button
-              className="px-2 py-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="p-1 rounded-ctrl text-ink-dim disabled:opacity-40 hover:bg-paper transition-colors"
               disabled={page === 0}
               onClick={() => setPage((p) => p - 1)}
+              aria-label="Previous page"
             >
-              ←
+              <ChevronLeft size={14} />
             </button>
-            <span>{currentPage} / {totalPages}</span>
+            <span className="font-data tabular-nums">{currentPage} / {totalPages}</span>
             <button
-              className="px-2 py-1 rounded border border-gray-200 dark:border-gray-700 disabled:opacity-40 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="p-1 rounded-ctrl text-ink-dim disabled:opacity-40 hover:bg-paper transition-colors"
               disabled={currentPage >= totalPages}
               onClick={() => setPage((p) => p + 1)}
+              aria-label="Next page"
             >
-              →
+              <ChevronRight size={14} />
             </button>
           </div>
         )}

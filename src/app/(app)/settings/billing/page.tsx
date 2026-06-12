@@ -52,7 +52,7 @@ const PLANS: Record<PlanKey, {
     monthlyPrice: 79,
     annualMonthlyPrice: 66,
     colorClass: "border-violet-300",
-    badgeClass: "bg-violet-50 text-violet-700 border-violet-200",
+    badgeClass: "bg-violet-soft text-violet border-violet-200",
     features: ["Unlimited queries", "Unlimited connections", "10 seats", "365 days history", "API access"],
   },
   team: {
@@ -268,7 +268,7 @@ function PlanCard({
   return (
     <div className={cn(
       "rounded-xl border p-5 flex flex-col gap-4 transition-shadow",
-      isCurrent ? `${meta.colorClass} shadow-md` : "border-[var(--border)] hover:shadow-sm",
+      isCurrent ? `${meta.colorClass} shadow-float` : "border-[var(--border)] hover:shadow-rest",
     )}>
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold text-[var(--text)]">{meta.label}</span>
@@ -455,7 +455,7 @@ export default function BillingPage() {
                   className={cn(
                     "px-3 py-1 rounded text-xs font-medium transition-colors capitalize",
                     billingPeriod === p
-                      ? "bg-white shadow-sm text-[var(--text)]"
+                      ? "bg-white shadow-rest text-[var(--text)]"
                       : "text-[var(--text-muted)] hover:text-[var(--text-dim)]"
                   )}
                 >

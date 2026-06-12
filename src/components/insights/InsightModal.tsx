@@ -71,7 +71,7 @@ export const InsightModal = ({ insight, onClose }: InsightModalProps) => {
             <div className="flex flex-col gap-5 pr-2">
               <div className="flex flex-wrap items-start justify-between gap-3 pr-8">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className={cn("text-xs font-semibold px-2.5 py-0.5 rounded-full border uppercase tracking-wide text-white shadow-sm", theme.badge)}>
+                  <span className={cn("text-xs font-semibold px-2.5 py-0.5 rounded-full border uppercase tracking-wide text-white shadow-rest", theme.badge)}>
                     {TYPE_LABELS[insight.type] ?? insight.type}
                   </span>
                   <span className={cn("text-[10px] font-medium px-2 py-0.5 rounded-full border", confClass)}>{insight.confidence}</span>

@@ -34,7 +34,7 @@ export const NetworkBanner = () => {
   if (!offline) return null
 
   return (
-    <div className="fixed top-0 inset-x-0 z-50 flex items-center justify-center gap-2 bg-warning/90 backdrop-blur-sm text-white text-xs font-medium py-2 px-4 shadow-sm">
+    <div className="fixed top-0 inset-x-0 z-50 flex items-center justify-center gap-2 bg-warning/90 backdrop-blur-sm text-white text-xs font-medium py-2 px-4 shadow-rest">
       <WifiOff size={13} className="shrink-0" />
       Cannot connect to Querify. Check your internet connection.
     </div>

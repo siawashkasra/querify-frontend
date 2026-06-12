@@ -169,7 +169,7 @@ function HistoryRow({ msg, connectionId, isExpanded, onToggle, canExport }: Hist
   return (
     <div className={cn(
       "rounded-lg border bg-white transition-shadow",
-      isExpanded ? "border-brand/30 shadow-sm" : "border-[var(--border)] hover:border-[var(--border-2)]"
+      isExpanded ? "border-brand/30 shadow-rest" : "border-[var(--border)] hover:border-[var(--border-2)]"
     )}>
       <div
         className="flex items-center gap-3 px-4 py-3 cursor-pointer select-none group"

@@ -3,7 +3,9 @@
 import { AlertTriangle } from "lucide-react"
 import type { AnswerCell } from "@/types"
 import { formatByField } from "@/lib/formatNumber"
+import { numClass } from "@/lib/numTrust"
 import { cn } from "@/lib/cn"
+import { DeltaChip } from "./DeltaChip"
 
 interface KpiItem {
   label: string
@@ -11,69 +13,83 @@ interface KpiItem {
   formatted?: string | null
   delta?: number | null
   delta_label?: string | null
+  good_direction?: "up" | "down" | null
   currency?: string | null
   unit?: string | null
+  context?: string | null
 }
 
 interface Props {
   cell: AnswerCell
 }
 
+// U3 — hero number cards. The value is the protagonist: big, mono, tabular, with
+// the trust underline from numClass(). One card sits at max-w 320px; two-to-four
+// share an equal-column grid. Currency comes from the measure unit only — counts
+// render as bare numbers.
 export function MetricsCell({ cell }: Props) {
   const cards = (cell.payload.cards as KpiItem[]) ?? []
-  // FIX 3 — a truth-gated value renders hedged, and when struck it is small +
-  // struck-through inside a warning block (never a hero metric card).
   const warning = Boolean(cell.payload.warning)
   const struck = Boolean(cell.payload.struck)
   const warningReason = cell.payload.warning_reason as string | undefined
-  // FIX 4 — render the measure's currency code (from the model), never a $.
   const currency = (cell.payload.currency as string | undefined) ?? undefined
+  const trust = numClass(cell.payload.routing_path as string | undefined)
 
   if (!cards.length) return null
 
+  const single = cards.length === 1
+
   return (
-    <div className="mb-4">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+    <div className="mb-2">
+      <div
+        className={cn(
+          single
+            ? "max-w-[320px]"
+            : "grid grid-cols-2 lg:grid-cols-4 gap-3"
+        )}
+      >
         {cards.map((card, i) => {
-          const isPositive = card.delta != null && card.delta > 0
-          const isNegative = card.delta != null && card.delta < 0
-          // FIX 3b / FIX 4 — never a raw float: prefer the backend-formatted
-          // string, else format by label with the measure's currency code.
-          const display = card.formatted ?? formatByField(card.value, card.label, { currency: card.currency ?? currency, unit: card.unit })
+          const display =
+            card.formatted ??
+            formatByField(card.value, card.label, { currency: card.currency ?? currency, unit: card.unit })
+          const context = card.context ?? null
           return (
             <div
               key={i}
               className={cn(
-                "rounded-lg border",
-                struck ? "p-2.5" : "p-3",
-                warning
-                  ? "bg-amber-50 dark:bg-amber-950/30 border-amber-300 dark:border-amber-800"
-                  : "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                "rounded-card border bg-surface shadow-rest",
+                struck ? "p-3" : "p-4",
+                warning ? "border-caution/40 bg-caution/5" : "border-line"
               )}
               title={typeof card.value === "number" ? String(card.value) : undefined}
             >
-              <p className="text-xs text-gray-500 dark:text-gray-400 mb-1 truncate">{card.label}</p>
-              <p className={cn(
-                "tabular-nums",
-                // struck-through and small: the number is never the hero here
-                struck ? "text-sm font-medium line-through decoration-amber-500/70" : "text-lg font-semibold",
-                warning ? "text-amber-700 dark:text-amber-300" : "text-gray-900 dark:text-gray-100"
-              )}>
-                {display}
+              {/* eyebrow */}
+              <p className="text-[11px] font-medium uppercase tracking-wide text-ink-dim mb-1.5 truncate">
+                {card.label}
               </p>
-              {card.delta != null && (
-                <p className={`text-xs mt-1 ${isPositive ? "text-green-600" : isNegative ? "text-red-600" : "text-gray-500"}`}>
-                  {isPositive ? "▲" : isNegative ? "▼" : "–"}{" "}
-                  {Math.abs(card.delta).toFixed(1)}%
-                  {card.delta_label ? ` ${card.delta_label}` : ""}
-                </p>
-              )}
+              {/* hero value */}
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span
+                  className={cn(
+                    struck
+                      ? "text-base font-medium line-through decoration-caution/70 font-data tabular-nums"
+                      : cn("text-[2.25rem] leading-none font-medium", warning ? "text-caution" : "text-ink", trust)
+                  )}
+                >
+                  {display}
+                </span>
+                {card.delta != null && !struck && (
+                  <DeltaChip delta={card.delta} goodDirection={card.good_direction} label={card.delta_label} />
+                )}
+              </div>
+              {/* humanized context line */}
+              {context && <p className="text-xs text-ink-dim mt-2">{context}</p>}
             </div>
           )
         })}
       </div>
       {warning && (
-        <div className="flex items-start gap-1.5 mt-2 text-xs text-amber-700 dark:text-amber-400">
+        <div className="flex items-start gap-1.5 mt-2 text-xs text-caution">
           <AlertTriangle size={12} className="flex-shrink-0 mt-0.5" />
           <span>{warningReason || "This figure looks anomalous — verify before relying on it."}</span>
         </div>

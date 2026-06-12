@@ -4,11 +4,11 @@ import { cn } from "@/lib/cn"
 interface SkeletonProps { className?: string }
 
 export const Skeleton = ({ className }: SkeletonProps) => (
-  <div className={cn("shimmer rounded bg-surface-3", className)} />
+  <div className={cn("shimmer rounded-ctrl bg-line", className)} />
 )
 
 export const SkeletonCard = ({ className }: SkeletonProps) => (
-  <div className={cn("rounded-lg border border-[var(--border)] bg-white p-4 flex flex-col gap-3", className)}>
+  <div className={cn("rounded-card border border-line bg-surface p-4 flex flex-col gap-3", className)}>
     <div className="flex items-center gap-2.5">
       <Skeleton className="h-8 w-8 rounded" />
       <div className="flex flex-col gap-1.5 flex-1">
@@ -29,7 +29,7 @@ export const SkeletonCard = ({ className }: SkeletonProps) => (
 )
 
 export const SkeletonRow = ({ className }: SkeletonProps) => (
-  <div className={cn("flex items-center gap-3 py-3 border-b border-[var(--border)]", className)}>
+  <div className={cn("flex items-center gap-3 py-3 border-b border-line", className)}>
     <Skeleton className="h-4 flex-1 max-w-xs" />
     <Skeleton className="h-5 w-16" />
     <Skeleton className="h-4 w-20" />

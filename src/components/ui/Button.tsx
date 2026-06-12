@@ -14,16 +14,18 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   loading?: boolean
 }
 
+// U2 — variants on U1 tokens. No gradients anywhere; hover darkens via
+// brightness (keeps the no-hex-outside-tokens rule); active nudges down 1px.
 const variantClasses: Record<Variant, string> = {
-  primary: "bg-brand text-white hover:bg-brand-dark border border-brand disabled:opacity-50",
-  secondary: "bg-surface-2 text-[var(--text)] hover:bg-surface-3 border border-[var(--border)]",
-  ghost: "bg-transparent text-[var(--text-dim)] border border-[var(--border)] hover:border-[var(--border-2,#cbd5e1)] hover:text-[var(--text)]",
-  danger: "bg-danger text-white hover:opacity-90 border border-danger disabled:opacity-50",
+  primary: "bg-violet text-white border border-violet hover:brightness-[0.94] active:translate-y-px",
+  secondary: "bg-surface text-ink border border-line hover:border-violet/40 active:translate-y-px",
+  ghost: "bg-transparent text-ink-dim border border-transparent hover:bg-violet-soft hover:text-ink",
+  danger: "bg-alert text-white border border-alert hover:brightness-[0.94] active:translate-y-px",
 }
 
 const sizeClasses: Record<Size, string> = {
   sm: "h-7 px-3 text-xs gap-1.5",
-  md: "h-9 px-4 text-sm gap-2",
+  md: "h-9 px-4 text-sm gap-1.5",
   lg: "h-11 px-6 text-base gap-2",
 }
 
@@ -33,9 +35,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       ref={ref}
       disabled={disabled || loading}
       className={cn(
-        "inline-flex items-center justify-center rounded font-medium transition-colors cursor-pointer",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-mid",
-        "disabled:cursor-not-allowed",
+        "inline-flex items-center justify-center rounded-ctrl font-medium cursor-pointer",
+        "transition-[background-color,border-color,filter,transform] duration-[var(--t-fast)] ease-[var(--ease)]",
+        "disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:brightness-100 disabled:active:translate-y-0",
         variantClasses[variant],
         sizeClasses[size],
         className

@@ -31,7 +31,7 @@ const EVENT_GROUP: Record<string, string> = {
 const DOT_CLASS: Record<string, string> = {
   queries: "bg-blue-500",
   connections: "bg-green-500",
-  context: "bg-purple-500",
+  context: "bg-violet",
 }
 
 const DOT_DEGRADED = new Set(["connection.degraded", "connection.deleted", "query.unsafe_blocked"])

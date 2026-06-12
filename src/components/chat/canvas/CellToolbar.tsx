@@ -142,12 +142,12 @@ export function CellToolbar({ cell, messageId, onRefine }: Props) {
       {/* Toolbar pill */}
       <div
         ref={toolbarRef}
-        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-1 z-10"
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-0.5 bg-surface dark:bg-gray-900 border border-line dark:border-gray-700 rounded-lg shadow-rest p-1 z-10"
       >
         {/* Copy */}
         <button
           onClick={handleCopy}
-          className="flex items-center justify-center h-6 w-6 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
+          className="flex items-center justify-center h-6 w-6 rounded hover:bg-paper dark:hover:bg-gray-800 text-ink-dim dark:text-ink-dim transition-colors"
           title={isTable || isComparison ? "Copy as markdown" : "Copy data"}
         >
           {copied ? <Check size={11} className="text-green-500" /> : <Copy size={11} />}
@@ -158,18 +158,18 @@ export function CellToolbar({ cell, messageId, onRefine }: Props) {
           <div className="relative">
             <button
               onClick={() => { setShowSwap((o) => !o); setShowSQL(false) }}
-              className="flex items-center justify-center h-6 w-6 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
+              className="flex items-center justify-center h-6 w-6 rounded hover:bg-paper dark:hover:bg-gray-800 text-ink-dim dark:text-ink-dim transition-colors"
               title="Swap chart type"
             >
               <BarChart2 size={11} />
             </button>
             {showSwap && (
-              <div className="absolute top-full right-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-1 z-20 w-32">
+              <div className="absolute top-full right-0 mt-1 bg-surface dark:bg-gray-900 border border-line dark:border-gray-700 rounded-lg shadow-float p-1 z-20 w-32">
                 {compatibleTypes(cell).map(({ type, label, Icon }) => (
                   <button
                     key={type}
                     onClick={() => handleSwapChart(type)}
-                    className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded transition-colors"
+                    className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-ink dark:text-gray-300 hover:bg-paper dark:hover:bg-gray-800 rounded transition-colors"
                   >
                     <Icon size={11} />
                     {label}
@@ -186,17 +186,17 @@ export function CellToolbar({ cell, messageId, onRefine }: Props) {
             <button
               onClick={() => { setShowSQL((o) => !o); setShowSwap(false) }}
               className={cn(
-                "flex items-center justify-center h-6 w-6 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors",
-                showSQL && "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                "flex items-center justify-center h-6 w-6 rounded hover:bg-paper dark:hover:bg-gray-800 text-ink-dim dark:text-ink-dim transition-colors",
+                showSQL && "bg-paper dark:bg-gray-800 text-ink dark:text-gray-200"
               )}
               title="View SQL"
             >
               <Code2 size={11} />
             </button>
             {showSQL && (
-              <div className="absolute top-full right-0 mt-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg p-3 z-20 w-80">
-                <p className="text-[10px] font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">SQL</p>
-                <pre className="text-xs text-gray-700 dark:text-gray-300 overflow-x-auto whitespace-pre-wrap font-mono leading-relaxed">
+              <div className="absolute top-full right-0 mt-1 bg-surface dark:bg-gray-900 border border-line dark:border-gray-700 rounded-lg shadow-float p-3 z-20 w-80">
+                <p className="text-[10px] font-medium text-ink-dim dark:text-ink-dim uppercase tracking-wide mb-2">SQL</p>
+                <pre className="text-xs text-ink dark:text-gray-300 overflow-x-auto whitespace-pre-wrap font-data leading-relaxed">
                   {sql}
                 </pre>
               </div>
@@ -208,7 +208,7 @@ export function CellToolbar({ cell, messageId, onRefine }: Props) {
         {(isChart || isTable) && (
           <button
             onClick={() => setExpanded(true)}
-            className="flex items-center justify-center h-6 w-6 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
+            className="flex items-center justify-center h-6 w-6 rounded hover:bg-paper dark:hover:bg-gray-800 text-ink-dim dark:text-ink-dim transition-colors"
             title="Expand"
           >
             <Expand size={11} />
@@ -219,7 +219,7 @@ export function CellToolbar({ cell, messageId, onRefine }: Props) {
         {isChart && (
           <button
             onClick={handleCopyPNG}
-            className="flex items-center justify-center h-6 w-6 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
+            className="flex items-center justify-center h-6 w-6 rounded hover:bg-paper dark:hover:bg-gray-800 text-ink-dim dark:text-ink-dim transition-colors"
             title="Copy as image"
           >
             <span className="text-[8px] font-medium">PNG</span>
@@ -230,7 +230,7 @@ export function CellToolbar({ cell, messageId, onRefine }: Props) {
         {canExport && (
           <button
             onClick={handleExportCSV}
-            className="flex items-center justify-center h-6 w-6 rounded hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
+            className="flex items-center justify-center h-6 w-6 rounded hover:bg-paper dark:hover:bg-gray-800 text-ink-dim dark:text-ink-dim transition-colors"
             title="Export CSV"
           >
             <Download size={11} />
@@ -244,14 +244,14 @@ export function CellToolbar({ cell, messageId, onRefine }: Props) {
           className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6"
           onClick={(e) => { if (e.target === e.currentTarget) setExpanded(false) }}
         >
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-auto">
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+          <div className="bg-surface dark:bg-gray-900 rounded-2xl shadow-float w-full max-w-4xl max-h-[90vh] overflow-auto">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-line dark:border-gray-800">
+              <p className="text-sm font-semibold text-ink dark:text-gray-200">
                 {cell.name?.replace(/_/g, " ")}
               </p>
               <button
                 onClick={() => setExpanded(false)}
-                className="text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+                className="text-ink-dim hover:text-ink dark:hover:text-gray-200 transition-colors"
               >
                 <X size={16} />
               </button>

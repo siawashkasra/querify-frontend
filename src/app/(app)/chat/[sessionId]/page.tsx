@@ -329,8 +329,8 @@ export default function ChatPage({ params }: ChatPageProps) {
             className={cn(
               "absolute left-0 top-1/2 -translate-y-1/2 -translate-x-1/2 z-20",
               "flex items-center justify-center w-6 h-6 rounded-full",
-              "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700",
-              "shadow-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-150"
+              "bg-white dark:bg-gray-900 border border-line dark:border-gray-700",
+              "shadow-float hover:bg-gray-50 dark:hover:bg-gray-800 transition-all duration-150"
             )}
             title={showRightPanel ? "Close panel" : "Open panel"}
           >

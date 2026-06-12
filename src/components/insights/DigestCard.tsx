@@ -41,7 +41,7 @@ export const DigestCard = ({ digest, onOpenInsight, onAskQuestion }: DigestCardP
   }
 
   return (
-    <div className="relative flex flex-col gap-4 rounded-lg border-2 border-brand/30 bg-gradient-to-br from-brand/5 to-white p-5 shadow-sm">
+    <div className="relative flex flex-col gap-4 rounded-lg border-2 border-brand/30 bg-gradient-to-br from-brand/5 to-white p-5 shadow-rest">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Calendar size={18} className="text-brand" />
@@ -64,7 +64,7 @@ export const DigestCard = ({ digest, onOpenInsight, onAskQuestion }: DigestCardP
               <button
                 key={insight.id}
                 onClick={() => onOpenInsight(insight)}
-                className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-left transition-all hover:border-brand hover:shadow-sm"
+                className="flex items-center gap-2 rounded-lg border border-[var(--border)] bg-white px-3 py-2 text-left transition-all hover:border-brand hover:shadow-rest"
               >
                 <span className={cn("rounded-sm px-2 py-0.5 text-[10px] font-medium", {
                   "bg-blue-50 text-blue-700": insight.type === "revenue_trend",

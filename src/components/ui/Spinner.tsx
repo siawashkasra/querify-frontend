@@ -13,7 +13,7 @@ const sizeClasses = { sm: "h-4 w-4 border-2", md: "h-6 w-6 border-2", lg: "h-8 w
 export const Spinner = ({ size = "md", className }: SpinnerProps) => (
   <div
     className={cn(
-      "rounded-full border-brand/20 border-t-brand animate-spin",
+      "rounded-full border-violet/20 border-t-violet animate-spin",
       sizeClasses[size],
       className
     )}

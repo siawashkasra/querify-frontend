@@ -5,9 +5,20 @@ const CURRENCY_TOKENS = ["revenue", "amount", "price", "cost", "sales", "mrr", "
   "total", "balance", "fee", "payment", "spend", "ltv", "gmv", "charge", "profit",
   "margin", "income", "salary"]
 const PERCENT_TOKENS = ["rate", "percent", "pct", "ratio", "churn", "conversion", "share", "growth"]
+// U9 — count tokens VETO the currency heuristic: an "orders" or "customers"
+// measure is a bare count, never $165. Currency on a count is impossible.
+const COUNT_TOKENS = ["count", "orders", "order", "customers", "customer", "qty",
+  "quantity", "number", "leads", "lead", "users", "user", "items", "transactions",
+  "invoices", "units", "products", "sessions", "visits"]
+
+export function isCountField(name?: string | null): boolean {
+  const n = (name ?? "").toLowerCase()
+  return COUNT_TOKENS.some((t) => new RegExp(`(^|[^a-z])${t}([^a-z]|$)`).test(n))
+}
 
 export function isCurrencyField(name?: string | null): boolean {
   const n = (name ?? "").toLowerCase()
+  if (isCountField(n)) return false
   return CURRENCY_TOKENS.some((t) => n.includes(t))
 }
 

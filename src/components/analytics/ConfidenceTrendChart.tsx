@@ -43,7 +43,7 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: { payl
   if (!active || !payload?.length) return null
   const d = payload[0].payload
   return (
-    <div className="rounded-lg border border-[var(--border)] bg-white shadow-md px-3 py-2 text-xs">
+    <div className="rounded-lg border border-[var(--border)] bg-white shadow-float px-3 py-2 text-xs">
       <p className="font-medium text-[var(--text)] mb-1">{format(parseISO(d.date), "MMM d, yyyy")}</p>
       <p className="text-[var(--text-dim)]">Avg score: <span className="font-semibold">{d.avg_score}</span></p>
       <p className="text-[var(--text-dim)]">Queries: <span className="font-semibold">{d.query_count}</span></p>

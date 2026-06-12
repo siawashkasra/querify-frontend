@@ -9,8 +9,9 @@
 // (sections.length > 0 || loading).
 
 import { useEffect, useRef, useState, type KeyboardEvent } from "react"
-import { ArrowUp, Zap } from "lucide-react"
+import { ArrowUp, Database } from "lucide-react"
 import { cn } from "@/lib/cn"
+import { Chip } from "@/components/ui/Chip"
 import { useAuthStore } from "@/store/authStore"
 
 function timeGreeting(firstName: string | null): string {
@@ -28,10 +29,10 @@ const STARTER_CHIPS = [
 
 // Intent → dot tint for the "Jump back in" list (mirrors the sidebar icons).
 const INTENT_DOT: Record<string, string> = {
-  comparison: "bg-blue-500",
-  trend: "bg-green-500",
-  diagnostic: "bg-amber-500",
-  ranking: "bg-violet-500",
+  comparison: "bg-chart-2",
+  trend: "bg-verify",
+  diagnostic: "bg-caution",
+  ranking: "bg-violet",
 }
 
 interface RecentSession {
@@ -106,8 +107,8 @@ export function Composer({ onSubmit, isLoading, hasContent, connectionName, rece
   const inputBox = (
     <div
       className={cn(
-        "w-full rounded-2xl border-[1.5px] bg-white dark:bg-gray-900 transition-all shadow-sm",
-        "border-gray-200 dark:border-gray-700 focus-within:border-violet-500 focus-within:shadow-[0_0_0_3px_rgba(124,58,237,0.08)]"
+        "w-full rounded-[14px] border bg-surface shadow-rest transition-all",
+        "border-line focus-within:border-violet focus-within:ring-4 focus-within:ring-violet/[0.14]"
       )}
     >
       <textarea
@@ -118,17 +119,22 @@ export function Composer({ onSubmit, isLoading, hasContent, connectionName, rece
         onKeyDown={handleKeyDown}
         disabled={isLoading}
         placeholder={isDocked ? "Follow up…" : "Ask anything about your data…"}
-        className="w-full resize-none bg-transparent px-5 pt-4 pb-3 text-[15px] text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 outline-none leading-relaxed disabled:opacity-50 block"
+        className={cn(
+          "w-full resize-none bg-transparent text-ink placeholder:text-ink-dim/60 outline-none leading-relaxed disabled:opacity-50 block",
+          isDocked ? "px-4 pt-3.5 pb-2 text-[15px]" : "px-5 pt-5 pb-2 text-[15px]"
+        )}
         style={{ maxHeight: 140 }}
       />
       <div className="flex items-center justify-between px-4 pb-3 pt-1">
-        <span className="text-xs text-gray-400 dark:text-gray-500 truncate max-w-[180px]">
-          {connectionName ?? "No connection"}
+        {/* connection chip — db glyph + name, paper pill */}
+        <span className="inline-flex items-center gap-1.5 text-xs text-ink-dim bg-paper rounded-pill px-2.5 py-1 truncate max-w-[200px]">
+          <Database size={11} className="shrink-0" />
+          <span className="truncate">{connectionName ?? "No connection"}</span>
         </span>
         <button
           onClick={handleSubmit}
           disabled={!value.trim() || isLoading}
-          className="flex items-center justify-center h-8 w-8 rounded-xl bg-violet-600 text-white disabled:opacity-40 hover:bg-violet-700 transition-colors"
+          className="flex items-center justify-center h-8 w-8 rounded-full bg-violet text-white disabled:bg-line disabled:text-ink-dim hover:brightness-[0.94] transition-[filter]"
           aria-label="Send"
         >
           <ArrowUp size={15} />
@@ -139,7 +145,7 @@ export function Composer({ onSubmit, isLoading, hasContent, connectionName, rece
 
   // Block/failure reason — always visible, never a silent no-op.
   const errorRow = errorMessage ? (
-    <p role="alert" className="mt-1.5 px-1 text-xs text-red-600 dark:text-red-400">
+    <p role="alert" className="mt-1.5 px-1 text-xs text-alert">
       {errorMessage}
     </p>
   ) : null
@@ -149,11 +155,8 @@ export function Composer({ onSubmit, isLoading, hasContent, connectionName, rece
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 py-8 gap-6 motion-safe:animate-[fadeSlideIn_0.2s_ease-out]">
         <div className="text-center">
-          <div className="inline-flex items-center gap-2 mb-3">
-            <Zap size={20} className="text-violet-500" />
-            <span className="text-xl font-semibold text-gray-900 dark:text-gray-100">{timeGreeting(firstName)}</span>
-          </div>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
+          <h1 className="font-display text-[1.75rem] font-semibold text-ink tracking-[-0.01em] mb-2">{timeGreeting(firstName)}</h1>
+          <p className="text-ink-dim text-sm">
             Ask a question about{connectionName ? ` ${connectionName}` : " your data"}.
           </p>
         </div>
@@ -162,27 +165,21 @@ export function Composer({ onSubmit, isLoading, hasContent, connectionName, rece
 
         <div className="flex flex-wrap gap-2 justify-center max-w-xl">
           {STARTER_CHIPS.map((chip) => (
-            <button
-              key={chip}
-              onClick={() => onSubmit(chip)}
-              className="text-sm px-3 py-1.5 rounded-full border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:border-violet-400 hover:text-violet-700 dark:hover:text-violet-300 transition-colors"
-            >
-              {chip}
-            </button>
+            <Chip key={chip} onClick={() => onSubmit(chip)}>{chip}</Chip>
           ))}
         </div>
 
         {recentSessions && recentSessions.length > 0 && (
           <div className="w-full max-w-xl">
-            <p className="text-xs text-gray-400 dark:text-gray-500 mb-2 font-medium uppercase tracking-wide">Jump back in</p>
+            <p className="text-xs text-ink-dim mb-2 font-medium uppercase tracking-wide">Jump back in</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
               {recentSessions.slice(0, 6).map((s) => (
                 <button
                   key={s.id}
                   onClick={() => onJumpBack?.(s.id)}
-                  className="flex items-center gap-2 text-left px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 hover:-translate-y-px transition-all truncate"
+                  className="flex items-center gap-2 text-left px-3 py-2 rounded-ctrl text-sm text-ink hover:bg-surface hover:-translate-y-px transition-all truncate"
                 >
-                  <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", INTENT_DOT[s.intent ?? ""] ?? "bg-gray-300 dark:bg-gray-600")} />
+                  <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", INTENT_DOT[s.intent ?? ""] ?? "bg-line")} />
                   <span className="truncate">{s.title || "Untitled session"}</span>
                 </button>
               ))}
@@ -195,7 +192,7 @@ export function Composer({ onSubmit, isLoading, hasContent, connectionName, rece
 
   // ── Docked mode (canvas has content) ─────────────────────────────────────
   return (
-    <div className="sticky bottom-0 z-10 bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm border-t border-gray-200 dark:border-gray-800 px-4 py-3">
+    <div className="sticky bottom-0 z-10 bg-paper/80 backdrop-blur-sm border-t border-line px-4 py-3">
       <div className="max-w-3xl mx-auto">{inputBox}{errorRow}</div>
     </div>
   )

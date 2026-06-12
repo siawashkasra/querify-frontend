@@ -85,7 +85,7 @@ export const TYPE_THEME: Record<InsightType, { bar: string; label: string; badge
   revenue_trend: { bar: "#3B82F6", label: "Revenue", badge: "bg-blue-600 text-white border-blue-700" },
   new_users: { bar: "#10B981", label: "Growth", badge: "bg-emerald-600 text-white border-emerald-700" },
   churn_signal: { bar: "#EF4444", label: "Churn", badge: "bg-red-600 text-white border-red-700" },
-  top_performer: { bar: "#8B5CF6", label: "Top performer", badge: "bg-violet-600 text-white border-violet-700" },
+  top_performer: { bar: "#8B5CF6", label: "Top performer", badge: "bg-violet text-white border-violet-700" },
   anomaly: { bar: "#F59E0B", label: "Anomaly", badge: "bg-amber-500 text-black border-amber-600" },
   recurring_question: { bar: "#6366f1", label: "Trending question", badge: "bg-indigo-600 text-white border-indigo-700" },
 }
@@ -383,7 +383,7 @@ export function InsightCard({ insight, onOpenModal, compact }: InsightCardProps)
         className={cn(
           "group relative flex flex-col rounded-lg border bg-[var(--surface)] overflow-hidden min-h-[300px]",
           "transition-[box-shadow,border-color,background-color] duration-200",
-          compact ? "" : "hover:shadow-md hover:border-[var(--border-2)]",
+          compact ? "" : "hover:shadow-float hover:border-[var(--border-2)]",
           isUnread ? `border-[var(--border)] bg-[var(--surface)] border-l-[3px] brightness-[1.01]` : "border-[var(--border)] bg-[var(--surface-2)]",
         )}
         style={isUnread ? { borderLeftColor: theme.bar } : undefined}
@@ -396,7 +396,7 @@ export function InsightCard({ insight, onOpenModal, compact }: InsightCardProps)
         }}
       >
         {isUnread ? (
-          <span className="absolute top-4 right-[4.75rem] h-2 w-2 rounded-full bg-[#2563eb] shadow-sm z-10" aria-hidden />
+          <span className="absolute top-4 right-[4.75rem] h-2 w-2 rounded-full bg-[#2563eb] shadow-rest z-10" aria-hidden />
         ) : null}
 
         <div className="h-2 w-full shrink-0" style={{ backgroundColor: theme.bar }} aria-hidden />
@@ -421,7 +421,7 @@ export function InsightCard({ insight, onOpenModal, compact }: InsightCardProps)
 
           <div
             className={cn(
-              "rounded-xl border border-[var(--border)] px-4 py-3 shadow-sm bg-[var(--surface)]",
+              "rounded-xl border border-[var(--border)] px-4 py-3 shadow-rest bg-[var(--surface)]",
               compact ? "py-2 px-3" : "",
             )}
           >

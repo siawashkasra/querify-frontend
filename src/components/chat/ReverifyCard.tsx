@@ -30,7 +30,7 @@ export function ReverifyCard({ message, connectionId, onReverified }: Props) {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-800 rounded-2xl shadow-sm px-5 py-4">
+    <div className="bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-800 rounded-2xl shadow-rest px-5 py-4">
       <div className="flex items-start gap-2.5">
         <span className="flex-shrink-0 mt-0.5 text-amber-500">
           <ShieldAlert size={16} />

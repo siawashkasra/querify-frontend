@@ -16,15 +16,23 @@ import {
 import type { ChartConfig } from "@/types"
 import { formatUnknownForUi } from "@/lib/formatDisplayValue"
 import { formatAxis, formatByField, isPercentField } from "@/lib/formatNumber"
+import { labelize } from "@/lib/labelize"
+import {
+  CHART_SERIES, seriesColor, EMPHASIS, POSITIVE, NEGATIVE,
+  axisTick, TICK_MARGIN, gridStroke, ZERO_LINE, ZERO_LINE_OPACITY,
+  AREA_GRADIENT_TOP, AREA_GRADIENT_BOTTOM, LINE_WIDTH, ACTIVE_DOT_RADIUS,
+  CHART_HEIGHT, SPARK_HEIGHT, tooltipCursor,
+  tooltipSurfaceClass, tooltipLabelClass, tooltipValueClass,
+} from "@/lib/chartTheme"
 
-const BRAND = "#7c3aed"
-const BRAND_DARK = "#6d28d9"
-const BRAND_MUTED = "#c4b5fd"
-const SUCCESS = "#16a34a"
-const DANGER = "#dc2626"
-const CATEGORICAL = ["#7c3aed", "#2563eb", "#0891b2", "#059669", "#d97706", "#db2777", "#65a30d", "#9333ea"]
-const CHART_HEIGHT = 280
-const SPARK_HEIGHT = 48
+// U4 — all chart color comes from the single theme (CSS-var palette). The local
+// aliases below keep the existing call-sites readable while pointing at tokens.
+const BRAND = EMPHASIS
+const BRAND_DARK = EMPHASIS
+const BRAND_MUTED = "var(--chart-5)"
+const SUCCESS = POSITIVE
+const DANGER = NEGATIVE
+const CATEGORICAL = CHART_SERIES
 
 const DATE_KEYWORDS = ["date", "month", "week", "year", "created", "_at", "time", "period", "quarter", "day"]
 const isDateCol = (col: string) => DATE_KEYWORDS.some((k) => col.toLowerCase().includes(k))
@@ -51,10 +59,10 @@ function toNum(v: unknown): number | null {
   return Number.isFinite(n) ? n : null
 }
 
-// §4 — human labels only: internal column names (prev_total_sales_orders)
-// never reach titles, legends or tooltips.
+// §4 / U9 — human labels only: internal column names (prev_total_sales_orders)
+// never reach titles, legends or tooltips. The single humanizer owns this.
 function humanize(field: string): string {
-  return String(field || "").replace(/_/g, " ").trim()
+  return labelize(field)
 }
 
 interface QueryChartProps {
@@ -138,22 +146,22 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
 
   const TooltipEl = (
     <Tooltip
-      cursor={{ fill: "var(--surface-3, #f1f5f9)" }}
+      cursor={tooltipCursor}
       content={({ active, payload, label }) => {
         if (!active || !payload?.length) return null
         return (
-          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] shadow-lg px-3 py-2 max-w-[220px]">
+          <div className={tooltipSurfaceClass}>
             {label != null && (
-              <p className="text-[11px] text-[var(--text-muted)] mb-1 truncate">
+              <p className={tooltipLabelClass}>
                 {typeof label === "object" ? formatUnknownForUi(label) : String(label)}
               </p>
             )}
             {payload.map((p, i) => {
               const field = String(p.dataKey ?? p.name ?? yPrimary)
               return (
-                <p key={i} className="font-mono text-sm font-semibold text-[var(--text)] flex items-center gap-1.5">
-                  {yFields.length > 1 && <span className="inline-block h-2 w-2 rounded-full" style={{ background: CATEGORICAL[i % CATEGORICAL.length] }} />}
-                  {yFields.length > 1 && <span className="font-sans font-normal text-[11px] text-[var(--text-muted)]">{humanize(field)}</span>}
+                <p key={i} className={tooltipValueClass}>
+                  {yFields.length > 1 && <span className="inline-block h-2 w-2 rounded-full" style={{ background: seriesColor(i) }} />}
+                  {yFields.length > 1 && <span className="font-sans font-normal text-[11px] text-ink-dim">{humanize(field)}</span>}
                   {formatByField(p.value, field, { compact: false })}
                 </p>
               )
@@ -165,23 +173,24 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
   )
 
   const yIsPercent = isPercentField(yPrimary)
-  const grid = <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+  // U4 — horizontal-only grid, no vertical lines, single hairline.
+  const grid = <CartesianGrid stroke={gridStroke} vertical={false} />
   const xAxis = (
-    <XAxis dataKey={x} tick={{ fill: "var(--text-muted)", fontFamily: "IBM Plex Mono", fontSize: 11 }}
-      tickLine={false} axisLine={{ stroke: "var(--border)" }} interval="preserveStartEnd"
+    <XAxis dataKey={x} tick={axisTick}
+      tickLine={false} axisLine={false} tickMargin={TICK_MARGIN} interval="preserveStartEnd"
       ticks={xTicks}
       angle={data.length > 8 ? -35 : 0} textAnchor={data.length > 8 ? "end" : "middle"} height={data.length > 8 ? 56 : 30}
       tickFormatter={(v: unknown) => truncate(String(v), 12)} />
   )
   const yAxis = (
-    <YAxis tick={{ fill: "var(--text-muted)", fontFamily: "IBM Plex Mono", fontSize: 11 }} tickLine={false}
-      axisLine={false} width={60}
+    <YAxis tick={axisTick} tickLine={false}
+      axisLine={false} width={60} tickMargin={TICK_MARGIN}
       domain={yIsPercent ? [0, 100] : [0, "auto"]}
       tickFormatter={(v: unknown) => yIsPercent ? `${v}%` : formatAxis(v, yPrimary)} />
   )
 
   if (!rows.length || (config.type !== "gauge" && data.length < 1)) {
-    return <p className="text-xs text-[var(--text-muted)] py-2">Not enough data to display this chart.</p>
+    return <p className="text-xs text-ink-dim py-2">Not enough data to display this chart.</p>
   }
 
   const t = config.type
@@ -195,11 +204,11 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
           {!isSpark && grid}{!isSpark && xAxis}{!isSpark && yAxis}{!isSpark && TooltipEl}
           {yFields.length > 1 && !isSpark && <Legend wrapperStyle={{ fontSize: 11 }} />}
           {yFields.map((yf, i) => (
-            <Line key={yf} dataKey={yf} name={humanize(yf)} stroke={i === 0 ? BRAND : CATEGORICAL[i % CATEGORICAL.length]} strokeWidth={2}
-              dot={false} type="monotone" isAnimationActive={mounted} activeDot={isSpark ? false : { r: 4, fill: BRAND }} />
+            <Line key={yf} dataKey={yf} name={humanize(yf)} stroke={i === 0 ? EMPHASIS : seriesColor(i)} strokeWidth={LINE_WIDTH}
+              dot={false} type="monotone" isAnimationActive={mounted} activeDot={isSpark ? false : { r: ACTIVE_DOT_RADIUS, fill: EMPHASIS }} />
           ))}
           {config.dashed_from != null && (
-            <Line dataKey={yPrimary} stroke={BRAND} strokeWidth={2} strokeDasharray="5 4" dot={false} type="monotone"
+            <Line dataKey={yPrimary} stroke={EMPHASIS} strokeWidth={LINE_WIDTH} strokeDasharray="5 4" dot={false} type="monotone"
               isAnimationActive={false} legendType="none"
               data={data.map((d, i) => (i >= (config.dashed_from as number) - 1 ? d : { ...d, [yPrimary]: null }))} />
           )}
@@ -212,30 +221,37 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
         <AreaChart data={data}>
           <defs>
             <linearGradient id="brandGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor={BRAND} stopOpacity={0.25} />
-              <stop offset="95%" stopColor={BRAND} stopOpacity={0} />
+              <stop offset="5%" stopColor={EMPHASIS} stopOpacity={AREA_GRADIENT_TOP} />
+              <stop offset="95%" stopColor={EMPHASIS} stopOpacity={AREA_GRADIENT_BOTTOM} />
             </linearGradient>
           </defs>
           {grid}{xAxis}{yAxis}{TooltipEl}
-          <Area dataKey={yPrimary} name={humanize(yPrimary)} stroke={BRAND} strokeWidth={2} fill="url(#brandGrad)" type="monotone" dot={false} isAnimationActive={mounted} activeDot={{ r: 4, fill: BRAND }} />
+          <Area dataKey={yPrimary} name={humanize(yPrimary)} stroke={EMPHASIS} strokeWidth={LINE_WIDTH} fill="url(#brandGrad)" type="monotone" dot={false} isAnimationActive={mounted} activeDot={{ r: ACTIVE_DOT_RADIUS, fill: EMPHASIS }} />
         </AreaChart>
       </ResponsiveContainer>
     )
   } else if (t === "bar" || t === "horizontal_bar" || t === "bar_horizontal") {
     const horizontal = t !== "bar"
+    // U4 — ranking: highlight the leader in --chart-1, mute the rest to 55%.
+    const leaderIdx = data.reduce((best, d, i) => ((toNum(d[yPrimary]) ?? -Infinity) > (toNum(data[best]?.[yPrimary]) ?? -Infinity) ? i : best), 0)
+    const isRanking = horizontal && scheme !== "good_bad" && scheme !== "categorical" && !emphasis.size
     chart = (
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <BarChart data={data} layout={horizontal ? "vertical" : "horizontal"} barSize={horizontal ? 18 : 28}>
-          <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" horizontal={!horizontal} vertical={horizontal} />
+          <CartesianGrid stroke={gridStroke} horizontal={!horizontal} vertical={horizontal} />
           {horizontal ? (
             <>
-              <XAxis type="number" tick={{ fill: "var(--text-muted)", fontFamily: "IBM Plex Mono", fontSize: 11 }} tickLine={false} axisLine={false} tickFormatter={(v: unknown) => formatAxis(v, yPrimary)} />
-              <YAxis type="category" dataKey={x} tick={{ fill: "var(--text-muted)", fontFamily: "IBM Plex Mono", fontSize: 11 }} tickLine={false} axisLine={false} width={110} tickFormatter={(v: unknown) => truncate(String(v), 16)} />
+              <XAxis type="number" tick={axisTick} tickLine={false} axisLine={false} tickMargin={TICK_MARGIN} tickFormatter={(v: unknown) => formatAxis(v, yPrimary)} />
+              <YAxis type="category" dataKey={x} tick={axisTick} tickLine={false} axisLine={false} width={110} tickMargin={TICK_MARGIN} tickFormatter={(v: unknown) => truncate(String(v), 16)} />
             </>
           ) : (<>{xAxis}{yAxis}</>)}
           {TooltipEl}
           <Bar dataKey={yPrimary} name={humanize(yPrimary)} radius={horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} isAnimationActive={mounted}>
-            {data.map((d, i) => <Cell key={i} fill={barFill(i, d[yPrimary])} />)}
+            {data.map((d, i) => (
+              isRanking
+                ? <Cell key={i} fill={EMPHASIS} fillOpacity={i === leaderIdx ? 1 : 0.55} />
+                : <Cell key={i} fill={barFill(i, d[yPrimary])} />
+            ))}
           </Bar>
         </BarChart>
       </ResponsiveContainer>
@@ -246,13 +262,13 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
     chart = (
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <BarChart data={data} layout="vertical" barSize={18}>
-          <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" horizontal={false} vertical />
-          <XAxis type="number" tick={{ fill: "var(--text-muted)", fontFamily: "IBM Plex Mono", fontSize: 11 }}
+          <CartesianGrid stroke={gridStroke} horizontal={false} vertical />
+          <XAxis type="number" tick={axisTick}
             tickLine={false} axisLine={false} tickFormatter={(v: unknown) => formatAxis(v, yPrimary)} />
-          <YAxis type="category" dataKey={x} tick={{ fill: "var(--text-muted)", fontFamily: "IBM Plex Mono", fontSize: 11 }}
+          <YAxis type="category" dataKey={x} tick={axisTick}
             tickLine={false} axisLine={false} width={130} tickFormatter={(v: unknown) => truncate(String(v), 18)} />
           {TooltipEl}
-          <ReferenceLine x={0} stroke="var(--text-muted)" />
+          <ReferenceLine x={0} stroke={ZERO_LINE} strokeOpacity={ZERO_LINE_OPACITY} />
           <Bar dataKey={yPrimary} name={humanize(yPrimary)} radius={[0, 3, 3, 0]} isAnimationActive={mounted}>
             {data.map((d, i) => (
               <Cell key={i} fill={(d[yPrimary] as number) >= 0 ? SUCCESS : DANGER} />
@@ -269,7 +285,7 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <BarChart data={plotData} barSize={28}>
           {grid}{xAxis}
-          <YAxis tick={{ fill: "var(--text-muted)", fontFamily: "IBM Plex Mono", fontSize: 11 }} tickLine={false} axisLine={false} width={60} tickFormatter={(v: unknown) => pct ? `${v}%` : formatAxis(v, yPrimary)} />
+          <YAxis tick={axisTick} tickLine={false} axisLine={false} width={60} tickFormatter={(v: unknown) => pct ? `${v}%` : formatAxis(v, yPrimary)} />
           {TooltipEl}
           <Legend wrapperStyle={{ fontSize: 11 }} />
           {yFields.map((yf, i) => (
@@ -297,8 +313,8 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <ScatterChart>
           {grid}
-          <XAxis type="number" dataKey={x} name={humanize(x)} tick={{ fill: "var(--text-muted)", fontSize: 11 }} tickLine={false} axisLine={{ stroke: "var(--border)" }} tickFormatter={(v: unknown) => formatAxis(v, x)} />
-          <YAxis type="number" dataKey={yScatter} name={humanize(yScatter)} tick={{ fill: "var(--text-muted)", fontSize: 11 }} tickLine={false} axisLine={false} width={60} tickFormatter={(v: unknown) => formatAxis(v, yScatter)} />
+          <XAxis type="number" dataKey={x} name={humanize(x)} tick={axisTick} tickLine={false} axisLine={false} tickFormatter={(v: unknown) => formatAxis(v, x)} />
+          <YAxis type="number" dataKey={yScatter} name={humanize(yScatter)} tick={axisTick} tickLine={false} axisLine={false} width={60} tickFormatter={(v: unknown) => formatAxis(v, yScatter)} />
           <ZAxis range={[40, 40]} />
           {TooltipEl}
           <Scatter data={data} fill={BRAND} isAnimationActive={mounted} />
@@ -312,8 +328,8 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <BarChart data={binned} barSize={28} barCategoryGap={2}>
           {grid}
-          <XAxis dataKey="bin" tick={{ fill: "var(--text-muted)", fontFamily: "IBM Plex Mono", fontSize: 10 }} tickLine={false} axisLine={{ stroke: "var(--border)" }} angle={-30} textAnchor="end" height={50} />
-          <YAxis tick={{ fill: "var(--text-muted)", fontSize: 11 }} tickLine={false} axisLine={false} width={40} allowDecimals={false} />
+          <XAxis dataKey="bin" tick={axisTick} tickLine={false} axisLine={false} angle={-30} textAnchor="end" height={50} />
+          <YAxis tick={axisTick} tickLine={false} axisLine={false} width={40} allowDecimals={false} />
           {TooltipEl}
           <Bar dataKey="count" fill={BRAND_DARK} radius={[4, 4, 0, 0]} isAnimationActive={mounted} />
         </BarChart>
@@ -325,7 +341,7 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
         <BarChart data={wf} barSize={32}>
           {grid}{xAxis}{yAxis}{TooltipEl}
-          <ReferenceLine y={0} stroke="var(--border)" />
+          <ReferenceLine y={0} stroke={gridStroke} />
           <Bar dataKey="_base" stackId="wf" fill="transparent" isAnimationActive={false} />
           <Bar dataKey="_delta" stackId="wf" radius={[3, 3, 0, 0]} isAnimationActive={mounted}>
             {wf.map((d, i) => <Cell key={i} fill={d._total ? BRAND : (d._raw as number) >= 0 ? SUCCESS : DANGER} />)}
@@ -343,11 +359,11 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
         <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
           <RadialBarChart innerRadius="70%" outerRadius="100%" data={[{ name: yPrimary, value }]} startAngle={210} endAngle={-30}>
             <PolarAngleAxis type="number" domain={[0, max]} tick={false} />
-            <RadialBar dataKey="value" cornerRadius={8} fill={BRAND} isAnimationActive={mounted} background={{ fill: "var(--surface-3, #f1f5f9)" }} />
+            <RadialBar dataKey="value" cornerRadius={8} fill={BRAND} isAnimationActive={mounted} background={{ fill: "var(--line)" }} />
           </RadialBarChart>
         </ResponsiveContainer>
         <div className="absolute inset-0 flex items-center justify-center">
-          <span className="font-mono text-2xl font-semibold text-brand">{formatByField(raw, yPrimary)}</span>
+          <span className="font-data text-2xl font-semibold text-violet">{formatByField(raw, yPrimary)}</span>
         </div>
       </div>
     )
@@ -365,12 +381,12 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
       </ResponsiveContainer>
     )
   } else {
-    chart = <p className="text-xs text-[var(--text-muted)] py-2">Chart type &quot;{t}&quot; is not supported yet.</p>
+    chart = <p className="text-xs text-ink-dim py-2">Chart type &quot;{t}&quot; is not supported yet.</p>
   }
 
   return (
     <div className="flex flex-col gap-1.5 transition-opacity duration-300" style={{ opacity: mounted ? 1 : 0 }}>
-      {config.title && t !== "sparkline" && <p className="text-sm text-[var(--text-dim)]">{humanize(config.title)}</p>}
+      {config.title && t !== "sparkline" && <p className="text-[13px] font-medium text-ink">{humanize(config.title)}</p>}
       {chart}
     </div>
   )
