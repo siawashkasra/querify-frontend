@@ -138,28 +138,65 @@ function useFLIP(deps: unknown[]) {
 function SectionView({ section, messageId, onFollowUp }: { section: AnswerSection; messageId?: string; onFollowUp?: (q: string) => void }) {
   const order = section.layout ?? section.cells.map((c) => c.id)
   const cellById = Object.fromEntries(section.cells.map((c) => [c.id, c]))
-  const orderedCells = order.flatMap((id) => (cellById[id] ? [cellById[id]] : []))
+  const rawOrdered = order.flatMap((id) => (cellById[id] ? [cellById[id]] : []))
+
+  // FIX 1 — a narrative cell identical to the one immediately before it must
+  // never render twice.
+  let prevNarr = ""
+  const orderedCells = rawOrdered.filter((c) => {
+    if (c.kind !== "narrative") { prevNarr = ""; return true }
+    const ps = (c.payload.paragraphs as string[]) ?? (c.payload.text ? [c.payload.text as string] : [])
+    const txt = ps.join("\n\n").trim()
+    if (txt && txt === prevNarr) return false
+    prevNarr = txt
+    return true
+  })
 
   const { containerRef, snapshot } = useFLIP([JSON.stringify(order)])
 
   // Snapshot before each render so FLIP has before-positions
   useEffect(() => { snapshot() })
 
+  // FIX 4 — agent notes render ONCE per section as a small inline meta row under
+  // the title, deduped (no consecutive duplicates), never a full-width banner.
+  const seen = new Set<string>()
+  const metaNotes = (section.agent_notes ?? []).filter((n) => {
+    const key = `${n.kind}::${n.text}`
+    if (seen.has(key)) return false
+    seen.add(key)
+    return true
+  })
+  const titleIdx = orderedCells.findIndex((c) => c.kind === "title")
+
+  const NotesRow = metaNotes.length > 0 ? (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-3 -mt-2">
+      {metaNotes.map((note, i) => (
+        <span
+          key={i}
+          dir="auto"
+          className={
+            "inline-flex items-center gap-1 text-xs " +
+            (note.kind === "fallback_notice"
+              ? "text-amber-600 dark:text-amber-400"
+              : "text-gray-400 dark:text-gray-500")
+          }
+        >
+          <span className="text-[10px] leading-none">{note.kind === "fallback_notice" ? "⚠" : "ℹ"}</span>
+          {note.text}
+        </span>
+      ))}
+    </div>
+  ) : null
+
   return (
     <section className="mb-10">
-      {section.agent_notes?.map((note, i) => (
-        <div
-          key={i}
-          className="flex gap-2 items-start bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900 rounded-lg px-3 py-2 mb-3 text-sm text-blue-700 dark:text-blue-300"
-        >
-          <span className="flex-shrink-0 mt-0.5">ℹ</span>
-          <span>{note.text}</span>
-        </div>
-      ))}
+      {/* When there's no title cell, the meta row sits at the top. */}
+      {titleIdx < 0 && NotesRow}
       <div ref={containerRef}>
-        {orderedCells.map((cell) => (
+        {orderedCells.map((cell, idx) => (
           <div key={cell.id} data-cell-id={cell.id}>
             <CellRenderer cell={cell} sectionQuestion={section.question} messageId={messageId} onRefine={onFollowUp} />
+            {idx === titleIdx && NotesRow}
           </div>
         ))}
       </div>

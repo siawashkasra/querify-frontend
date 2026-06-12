@@ -223,7 +223,10 @@ http.interceptors.response.use(
       message = (typeof detail === "string" ? detail : null) || error.message || "An unexpected error occurred"
       error_type = "UNKNOWN_ERROR"
     }
-    return Promise.reject({ error_type, message, status })
+    // Pass through any extra fields from an object detail (e.g. the 409
+    // ALREADY_CONNECTED carries connection_id + name) so callers can act on them.
+    const extra = (typeof detail === "object" && detail !== null && !Array.isArray(detail)) ? detail : {}
+    return Promise.reject({ ...extra, error_type, message, status })
   }
 )
 
@@ -307,6 +310,7 @@ export const connections = {
     password: string
     ssl_mode?: string
     extra_params?: Record<string, unknown>
+    replace_existing?: boolean
   }) => post<Connection>("/api/v1/connections", data),
   update: (id: string, data: {
     name?: string

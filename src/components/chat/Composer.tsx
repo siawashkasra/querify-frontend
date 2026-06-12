@@ -48,9 +48,11 @@ interface Props {
   recentSessions?: RecentSession[]
   onJumpBack?: (sessionId: string) => void
   initialValue?: string
+  /** Why a submit was blocked/failed — shown under the input, never silent. */
+  errorMessage?: string | null
 }
 
-export function Composer({ onSubmit, isLoading, hasContent, connectionName, recentSessions, onJumpBack, initialValue }: Props) {
+export function Composer({ onSubmit, isLoading, hasContent, connectionName, recentSessions, onJumpBack, initialValue, errorMessage }: Props) {
   const [value, setValue] = useState(initialValue ?? "")
   const ref = useRef<HTMLTextAreaElement>(null)
   const isDocked = hasContent || isLoading
@@ -135,6 +137,13 @@ export function Composer({ onSubmit, isLoading, hasContent, connectionName, rece
     </div>
   )
 
+  // Block/failure reason — always visible, never a silent no-op.
+  const errorRow = errorMessage ? (
+    <p role="alert" className="mt-1.5 px-1 text-xs text-red-600 dark:text-red-400">
+      {errorMessage}
+    </p>
+  ) : null
+
   // ── Hero mode (empty canvas) ──────────────────────────────────────────────
   if (!isDocked) {
     return (
@@ -149,7 +158,7 @@ export function Composer({ onSubmit, isLoading, hasContent, connectionName, rece
           </p>
         </div>
 
-        <div className="w-full max-w-xl">{inputBox}</div>
+        <div className="w-full max-w-xl">{inputBox}{errorRow}</div>
 
         <div className="flex flex-wrap gap-2 justify-center max-w-xl">
           {STARTER_CHIPS.map((chip) => (
@@ -187,7 +196,7 @@ export function Composer({ onSubmit, isLoading, hasContent, connectionName, rece
   // ── Docked mode (canvas has content) ─────────────────────────────────────
   return (
     <div className="sticky bottom-0 z-10 bg-white/80 dark:bg-gray-950/80 backdrop-blur-sm border-t border-gray-200 dark:border-gray-800 px-4 py-3">
-      <div className="max-w-3xl mx-auto">{inputBox}</div>
+      <div className="max-w-3xl mx-auto">{inputBox}{errorRow}</div>
     </div>
   )
 }

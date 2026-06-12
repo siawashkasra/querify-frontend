@@ -12,6 +12,7 @@ import {
 import { clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { useAppStore } from "@/store/appStore"
+import { useChatStore } from "@/store/chatStore"
 import { useAuthStore } from "@/store/authStore"
 import { connections, insights as insightsApi, me as meApi, query as queryApi } from "@/lib/api"
 import { INSIGHTS_ENABLED } from "@/lib/featureFlags"
@@ -178,6 +179,9 @@ function UserFooter({ collapsed }: { collapsed: boolean }) {
 function SessionItem({ session, isActive, onDelete }: { session: ChatSession; isActive: boolean; onDelete: (id: string) => void }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  // FIX 4b — live auto-title from the session_title SSE event, no refetch.
+  const liveTitle = useChatStore((s) => s.sessionTitles[session.id])
+  const title = liveTitle ?? session.title ?? "New chat"
 
   const handleDelete = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -197,7 +201,7 @@ function SessionItem({ session, isActive, onDelete }: { session: ChatSession; is
             : "border-transparent text-[var(--text-dim)] hover:bg-white hover:text-[var(--text)]"
         )}
       >
-        <span className="truncate flex-1 leading-tight">{(session.title || "New chat").slice(0, 50)}</span>
+        <span className="truncate flex-1 leading-tight">{title.slice(0, 50)}</span>
       </Link>
       <div ref={menuRef} className="absolute right-1 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
         <button

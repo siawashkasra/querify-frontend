@@ -71,6 +71,7 @@ interface ChatState {
 
   addUserMessage: (sessionId: string, prompt: string) => string
   addLoadingMessage: (sessionId: string) => string
+  removeMessage: (sessionId: string, id: string) => void
   resolveMessage: (sessionId: string, tempId: string, result: QueryResult) => void
   rejectMessage: (sessionId: string, tempId: string, error: string, errorType?: string | null, errorDetail?: string | null, retryPrompt?: string | null) => void
   setMessageStage: (sessionId: string, tempId: string, stage: string) => void
@@ -84,6 +85,7 @@ interface ChatState {
   addPanelLoadingMessage: (sessionId: string) => string
   resolvePanelMessage: (sessionId: string, tempId: string, text: string) => void
   rejectPanelMessage: (sessionId: string, tempId: string, error: string) => void
+  resolvePanelAssistantFromStream: (sessionId: string, text: string) => void
   // v2 document reducers
   v2SectionStart: (sessionId: string, tempId: string, sectionId: string, question: string) => void
   v2CellStart: (sessionId: string, tempId: string, cellId: string, name: string, kind: string, sectionId: string) => void
@@ -153,6 +155,15 @@ export const useChatStore = create<ChatState>((set) => ({
       },
     }))
     return id
+  },
+
+  removeMessage: (sessionId, id) => {
+    set((s) => ({
+      threads: {
+        ...s.threads,
+        [sessionId]: (s.threads[sessionId] ?? []).filter((m) => m.id !== id),
+      },
+    }))
   },
 
   resolveMessage: (sessionId, tempId, result) => {
@@ -293,6 +304,30 @@ export const useChatStore = create<ChatState>((set) => ({
     }))
   },
 
+  // Fill the pending panel loading bubble from the panel_message SSE event.
+  // The SSE event is the source of truth — no post-stream fallback hack.
+  resolvePanelAssistantFromStream: (sessionId, text) => {
+    set((s) => {
+      const thread = s.panelMessages[sessionId] ?? []
+      const pending = [...thread].reverse().find((m) => m.role === "assistant" && m.loading)
+      if (pending) {
+        return {
+          panelMessages: {
+            ...s.panelMessages,
+            [sessionId]: thread.map((m) => (m.id === pending.id ? { ...m, loading: false, text } : m)),
+          },
+        }
+      }
+      // No pending bubble — append a fresh assistant message.
+      return {
+        panelMessages: {
+          ...s.panelMessages,
+          [sessionId]: [...thread, { id: tempId(), role: "assistant" as const, text, createdAt: new Date() }],
+        },
+      }
+    })
+  },
+
   // ── v2 document reducers ──────────────────────────────────────────────────
 
   v2SectionStart: (sessionId, tempId, sectionId, question) => {
@@ -338,16 +373,26 @@ export const useChatStore = create<ChatState>((set) => ({
     }))
   },
 
-  v2CellUpdate: (sessionId, tempId, cell) => {
+  v2CellUpdate: (sessionId, _tempId, cell) => {
+    // REFINE replaces a cell by id wherever it lives — the cell may belong to a
+    // PRIOR message (panel REFINE), not the streaming message. Search all
+    // messages in the session and update the one that owns the cell.
     set((s) => ({
       threads: {
         ...s.threads,
-        [sessionId]: _updateMessageDoc(s.threads[sessionId] ?? [], tempId, (doc) =>
-          _updateSection(doc, cell.section_id, (sec) => ({
-            ...sec,
-            cells: sec.cells.map((c) => (c.id === cell.id ? cell : c)),
-          }))
-        ),
+        [sessionId]: (s.threads[sessionId] ?? []).map((m) => {
+          if (!m.document?.sections?.some((sec) => sec.cells.some((c) => c.id === cell.id))) return m
+          return {
+            ...m,
+            document: {
+              ...m.document,
+              sections: m.document.sections.map((sec) => ({
+                ...sec,
+                cells: sec.cells.map((c) => (c.id === cell.id ? cell : c)),
+              })),
+            },
+          }
+        }),
       },
     }))
   },

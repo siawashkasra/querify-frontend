@@ -28,6 +28,9 @@ const STATUS_CONFIG: Record<MessageStatus, { label: string; className: string }>
   empty: { label: "Empty", className: "bg-[var(--text-muted)]/10 text-[var(--text-muted)] border-[var(--text-muted)]/20" },
   timeout: { label: "Timeout", className: "bg-warning/10 text-warning border-warning/20" },
   unsafe: { label: "Unsafe", className: "bg-warning/10 text-warning border-warning/20" },
+  declined: { label: "Clarify", className: "bg-brand/10 text-brand border-brand/20" },
+  clarify_needed: { label: "Clarify", className: "bg-brand/10 text-brand border-brand/20" },
+  needs_reverification: { label: "Re-verify", className: "bg-warning/10 text-warning border-warning/20" },
 }
 
 function StatusBadge({ status }: { status: MessageStatus }) {

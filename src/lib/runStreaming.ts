@@ -18,14 +18,16 @@ interface StoreActions {
   v2AgentNote: (sessionId: string, id: string, sectionId: string, note: AgentNote) => void
   v2SessionTitle: (sessionId: string, title: string) => void
   v2DocDone: (sessionId: string, id: string, sectionId: string, followUps: string[], completionText: string | null) => void
+  resolvePanelAssistantFromStream?: (sessionId: string, text: string) => void
 }
 
 export async function runStreaming(
   store: StoreActions,
   sessionId: string,
   loadingId: string,
-  body: { prompt: string; connection_id: string; session_id?: string },
+  body: { prompt: string; connection_id: string; session_id?: string; panel_mode?: boolean; mentions?: { section_id?: string; cell_id?: string; name: string }[] },
   signal?: AbortSignal,
+  opts?: { onPanelMessage?: (text: string) => void },
 ): Promise<void> {
   let final = null as unknown as import("@/lib/streamQuery").StreamEvent | null
   try {
@@ -77,6 +79,13 @@ export async function runStreaming(
         case "agent_note":
           if (e.protocol_version === 2)
             store.v2AgentNote(sessionId, loadingId, e.section_id as string, { kind: e.kind, text: e.text } as AgentNote)
+          break
+        case "panel_message":
+          if (e.protocol_version === 2) {
+            const text = (e.text ?? "") as string
+            store.resolvePanelAssistantFromStream?.(sessionId, text)
+            opts?.onPanelMessage?.(text)
+          }
           break
         case "session_title":
           if (e.protocol_version === 2)

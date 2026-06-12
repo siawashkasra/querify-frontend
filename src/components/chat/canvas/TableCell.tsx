@@ -13,6 +13,7 @@ import { ChevronUp, ChevronDown, ChevronsUpDown, X, Plus } from "lucide-react"
 import { useAuthStore } from "@/store/authStore"
 import type { AnswerCell } from "@/types"
 import { cn } from "@/lib/cn"
+import { formatByField } from "@/lib/formatNumber"
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 const PAGE_SIZE = 50
@@ -53,7 +54,12 @@ export function TableCell({ cell, messageId }: Props) {
   const [liveData, setLiveData] = useState<RowsResponse | null>(null)
   const [liveLoading, setLiveLoading] = useState(false)
 
-  const hasEndpoint = Boolean(messageId && cell.id)
+  // FIX 3c — during streaming the message id is a temp id (tmp_*) that the
+  // rows endpoint can't resolve. Interactive controls (filter/sort/pagination)
+  // stay disabled until the real message id is known (post doc_done / reload);
+  // preview rows render either way.
+  const isRealMessageId = Boolean(messageId && !messageId.startsWith("tmp_"))
+  const hasEndpoint = isRealMessageId && Boolean(cell.id)
   const useLive = hasEndpoint && (sorting.length > 0 || filter !== null || page > 0)
 
   const fetchRows = useCallback(async () => {
@@ -102,9 +108,18 @@ export function TableCell({ cell, messageId }: Props) {
     cell: ({ getValue }) => {
       const v = getValue()
       if (v == null) return <span className="text-gray-400">—</span>
-      const s = String(v)
       const num = isNumeric(v)
-      return <span className={cn(num && "font-mono tabular-nums text-right block")}>{s}</span>
+      // FIX 3b — numeric cells render formatted (currency/percent/compact aware),
+      // never a raw float; the exact value is in the title tooltip.
+      const s = num ? formatByField(v, col) : String(v)
+      return (
+        <span
+          className={cn(num && "font-mono tabular-nums text-right block")}
+          title={num ? String(v) : undefined}
+        >
+          {s}
+        </span>
+      )
     },
   }))
 

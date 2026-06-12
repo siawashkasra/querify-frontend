@@ -80,7 +80,22 @@ function SectionGroup({ sectionId, items, isActive, onRetry }: SectionGroupProps
   const totalCells = cellItems.length
   const [copied, setCopied] = useState(false)
 
-  const title = questionItem?.text.slice(0, 45) ?? "Section"
+  // FIX 3c — never the bare "Section" placeholder; the question is always
+  // present (section_start), so the chip reads as the user's question.
+  const title = questionItem?.text.slice(0, 45) || "Answer"
+
+  // FIX 4 — the fallback note (and any agent note) shows ONCE per section in the
+  // panel feed; dedupe identical notes so it never repeats consecutively.
+  const seenNotes = new Set<string>()
+  const feedItems = items
+    .filter((i) => i.t !== "completion")
+    .filter((item) => {
+      if (item.t !== "note") return true
+      const key = `${item.kind}::${item.text}`
+      if (seenNotes.has(key)) return false
+      seenNotes.add(key)
+      return true
+    })
 
   const handleCopyCompletion = async () => {
     if (!completionItem) return
@@ -115,9 +130,7 @@ function SectionGroup({ sectionId, items, isActive, onRetry }: SectionGroupProps
 
       {open && (
         <div className="px-4 pb-3">
-          {items
-            .filter((i) => i.t !== "completion")
-            .map((item, i) => <FeedRow key={i} item={item} />)}
+          {feedItems.map((item, i) => <FeedRow key={i} item={item} />)}
 
           {completionItem && (
             <div className="mt-2 bg-gray-50 dark:bg-gray-800/60 rounded-xl p-3">

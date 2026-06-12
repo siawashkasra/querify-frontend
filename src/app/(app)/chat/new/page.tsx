@@ -122,6 +122,7 @@ function NewChatPage() {
         {hasMessages && (
           <ChatCanvas
             messages={messages}
+            connectionId={activeConnectionId ?? searchParams.get("connection")}
             onFollowUp={handleSubmit}
             onRetry={handleSubmit}
           />

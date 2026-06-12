@@ -10,6 +10,7 @@ interface AppState {
   setActiveSession: (id: string | null) => void
   toggleSidebar: () => void
   toggleRightPanel: () => void
+  setRightPanel: (open: boolean) => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -23,6 +24,7 @@ export const useAppStore = create<AppState>()(
       setActiveSession: (id) => set({ activeSessionId: id }),
       toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
       toggleRightPanel: () => set((s) => ({ showRightPanel: !s.showRightPanel })),
+      setRightPanel: (open) => set({ showRightPanel: open }),
     }),
     {
       name: "querify-app",

@@ -10,13 +10,24 @@
 //   5. nothing                                                      → null
 
 import { useRef, useEffect, useCallback } from "react"
-import { format } from "date-fns"
 import { SessionCanvas } from "@/components/chat/canvas/SessionCanvas"
 import { LegacyAnswer } from "@/components/chat/LegacyAnswer"
+import { ClarifyCard } from "@/components/chat/ClarifyCard"
+import { ReverifyCard } from "@/components/chat/ReverifyCard"
 import ResultCard from "@/components/chat/ResultCard"
 import TypingIndicator from "@/components/chat/TypingIndicator"
 import type { ThreadMessage } from "@/store/chatStore"
 import type { QueryResult } from "@/types"
+
+// Ambiguous/declined answers render as a (non-error) clarify card.
+function _declineText(m: ThreadMessage): string | null {
+  const r = m.result
+  if (!r) return null
+  if (r.status === "declined" || r.status === "clarify_needed" || r.response_type === "clarify") {
+    return (r.message || r.summary || "") as string
+  }
+  return null
+}
 
 const EMPTY_RESULT: QueryResult = {
   message_id: "", status: "success", summary: null, sql: null, chart_config: null,
@@ -27,11 +38,12 @@ const EMPTY_RESULT: QueryResult = {
 interface Props {
   messages: ThreadMessage[]
   connectionName?: string
+  connectionId?: string | null
   onFollowUp?: (q: string) => void
   onRetry?: (prompt: string) => void
 }
 
-export function ChatCanvas({ messages, connectionName, onFollowUp, onRetry }: Props) {
+export function ChatCanvas({ messages, connectionName, connectionId, onFollowUp, onRetry }: Props) {
   const bottomRef = useRef<HTMLDivElement>(null)
   const isFirstRender = useRef(true)
   const isLoading = messages.some((m) => m.loading)
@@ -52,21 +64,39 @@ export function ChatCanvas({ messages, connectionName, onFollowUp, onRetry }: Pr
     scrollToBottom("smooth")
   }, [messages.length, lastId, isLoading, scrollToBottom])
 
+  // Dedupe: a run of identical consecutive declines collapses to ONE card
+  // (the most recent). Skip every decline whose next assistant message is an
+  // identical decline.
+  const skipDecline = (() => {
+    const skip = new Set<string>()
+    const assist = messages.filter((m) => m.role === "assistant").map((m) => ({ id: m.id, dt: _declineText(m) }))
+    for (let i = 0; i < assist.length; i++) {
+      const cur = assist[i]
+      if (cur.dt === null) continue
+      const next = assist[i + 1]
+      if (next && next.dt === cur.dt) skip.add(cur.id)
+    }
+    return skip
+  })()
+
   return (
     <div className="flex-1 min-h-0 overflow-y-auto">
       <div className="flex flex-col gap-6 py-6 max-w-4xl mx-auto w-full">
         {messages.map((msg, idx) => {
-          // ── User bubble ──────────────────────────────────────────────────
+          // ── User message ─────────────────────────────────────────────────
+          // Render the user's message as a right-aligned bubble before its
+          // section (ChatGPT pattern). Optimistic: the bubble is added to the
+          // thread on submit, so it appears instantly before the first SSE byte.
+          // The panel still keeps the question chip.
           if (msg.role === "user") {
+            if (!msg.prompt) return null
             return (
-              <div key={msg.id} className="flex justify-end group px-4">
-                <div className="relative max-w-[70%]">
-                  <div className="bg-violet-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 text-sm leading-relaxed">
-                    {msg.prompt}
-                  </div>
-                  <p className="absolute -bottom-4 right-0 text-[10px] text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                    {format(msg.createdAt, "HH:mm")}
-                  </p>
+              <div key={msg.id} className="px-4 flex justify-end">
+                <div
+                  dir="auto"
+                  className="max-w-[70%] rounded-2xl bg-violet-600 text-white px-4 py-2.5 text-sm leading-relaxed whitespace-pre-wrap break-words shadow-sm"
+                >
+                  {msg.prompt}
                 </div>
               </div>
             )
@@ -118,6 +148,34 @@ export function ChatCanvas({ messages, connectionName, onFollowUp, onRetry }: Pr
                 ) : (
                   <TypingIndicator stage={msg.stage} />
                 )}
+              </div>
+            )
+          }
+
+          // 2.4. Stale-model trap → honest re-verify card with a one-click action.
+          if (msg.result?.response_type === "needs_reverification" || msg.result?.status === "needs_reverification") {
+            return (
+              <div key={msg.id} className="px-4">
+                <ReverifyCard
+                  message={(msg.result.message || msg.result.summary || "Your connection needs re-verification.") as string}
+                  connectionId={connectionId}
+                />
+              </div>
+            )
+          }
+
+          // 2.5. Ambiguous / declined → clarify card (NOT a red error card).
+          const declineText = _declineText(msg)
+          if (declineText !== null) {
+            if (skipDecline.has(msg.id)) return null  // collapsed duplicate
+            return (
+              <div key={msg.id} className="px-4">
+                <ClarifyCard
+                  message={declineText || "I couldn't match that to a verified measure."}
+                  suggestions={msg.result?.suggestions ?? []}
+                  onSuggestion={onFollowUp}
+                  onRetry={prevUser?.prompt ? () => onRetry?.(prevUser.prompt!) : undefined}
+                />
               </div>
             )
           }

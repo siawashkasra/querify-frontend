@@ -1,6 +1,6 @@
 export type DbType = "postgres" | "mysql" | "mssql" | "bigquery" | "snowflake" | "redshift"
 export type ConnectionStatus = "active" | "error" | "pending" | "untested"
-export type MessageStatus = "success" | "failed" | "pending" | "empty" | "timeout" | "unsafe"
+export type MessageStatus = "success" | "failed" | "pending" | "empty" | "timeout" | "unsafe" | "declined" | "clarify_needed" | "needs_reverification"
 export type MessageRole = "user" | "assistant"
 export type InsightSeverity = "info" | "warning" | "critical"
 export type ExportStatus = "pending" | "processing" | "done" | "failed"
@@ -218,7 +218,7 @@ export interface QueryResult {
   total_ms: number | null
   model_used?: string | null
   feedback_score?: 1 | -1 | null
-  response_type?: "standard" | "analytical" | "correction_acknowledged"
+  response_type?: "standard" | "analytical" | "correction_acknowledged" | "clarify" | "panel_message" | "refine" | "needs_reverification"
   analytical_narrative?: string | null
   analytical_sub_queries?: AnalyticalSubQuery[]
   confidence_score?: number | null
@@ -640,8 +640,10 @@ export interface BriefingData {
   business_summary: string
   greeting_summary: string
   headline_paragraph: string
-  status: "ok" | "partial" | "no_definition"
+  status: "ok" | "partial" | "no_definition" | "needs_reverification"
   kpis: BriefingKpiData[]
+  // FIX 3 — KPIs pulled out of the grid for failing the sanity gate (small tiles)
+  needs_verification?: { label: string; reason: string }[]
   priorities: BriefingPriority[]
   drivers: BriefingDrivers | null
   patterns: BriefingPattern[]

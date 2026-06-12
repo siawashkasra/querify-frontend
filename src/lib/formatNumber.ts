@@ -51,7 +51,10 @@ export function formatNumber(value: unknown, opts: { compact?: boolean } = {}): 
 const _symbolCache = new Map<string, string>()
 
 export function currencySymbol(code?: string | null): string {
-  if (!code) return "$"
+  // No hardcoded '$' default: when the currency is unknown we render a bare
+  // number rather than a misleading dollar sign (FIX 4). Callers that know the
+  // measure's currency pass its ISO code and get the right symbol via Intl.
+  if (!code) return ""
   const c = code.trim().toUpperCase()
   const cached = _symbolCache.get(c)
   if (cached !== undefined) return cached
@@ -86,9 +89,19 @@ export function formatPercent(value: unknown): string {
   return pct === Math.round(pct) ? `${pct}%` : `${pct.toFixed(1)}%`
 }
 
-// Format a value, inferring currency/percent from the column name.
-export function formatByField(value: unknown, field?: string | null, opts: { compact?: boolean; currency?: string | null } = {}): string {
+// Format a value. The measure's UNIT is authoritative when provided: a 'count'
+// is a plain number and NEVER gets a currency symbol, whatever the field name.
+// Only when the unit is unknown do we infer currency/percent from the name.
+export function formatByField(
+  value: unknown,
+  field?: string | null,
+  opts: { compact?: boolean; currency?: string | null; unit?: string | null } = {},
+): string {
   if (value == null) return "—"
+  const unit = (opts.unit ?? "").toLowerCase()
+  if (unit === "count") return formatNumber(value, { compact: opts.compact ?? false })
+  if (unit === "percent") return formatPercent(value)
+  if (unit === "currency") return formatCurrency(value, { compact: opts.compact ?? true, code: opts.currency })
   if (isCurrencyField(field)) return formatCurrency(value, { compact: opts.compact ?? true, code: opts.currency })
   if (isPercentField(field)) return formatPercent(value)
   const n = toNumber(value)

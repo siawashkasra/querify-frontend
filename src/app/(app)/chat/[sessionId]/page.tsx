@@ -29,7 +29,7 @@ export default function ChatPage({ params }: ChatPageProps) {
   const { sessionId } = use(params)
   const router = useRouter()
   const qc = useQueryClient()
-  const { activeConnectionId, setActiveSession, showRightPanel, toggleRightPanel } = useAppStore()
+  const { activeConnectionId, setActiveConnection, setActiveSession, showRightPanel, toggleRightPanel, setRightPanel } = useAppStore()
   const {
     threads,
     panelMessages,
@@ -44,9 +44,8 @@ export default function ChatPage({ params }: ChatPageProps) {
     addMessageFinding,
     loadThread,
     addPanelUserMessage,
-    addPanelLoadingMessage,
-    resolvePanelMessage,
-    rejectPanelMessage,
+    removeMessage,
+    resolvePanelAssistantFromStream,
     v2SectionStart,
     v2CellStart,
     v2CellComplete,
@@ -63,6 +62,8 @@ export default function ChatPage({ params }: ChatPageProps) {
   const [panelLoading, setPanelLoading] = useState(false)
   const [usageWarning, setUsageWarning] = useState<{ pct: number } | null>(null)
   const [warningDismissed, setWarningDismissed] = useState(false)
+  // Why a submit was blocked — surfaced under the composer, never a silent return.
+  const [submitError, setSubmitError] = useState<string | null>(null)
 
   useEffect(() => {
     function onWarning(e: Event) {
@@ -73,20 +74,36 @@ export default function ChatPage({ params }: ChatPageProps) {
     return () => window.removeEventListener("querify:usage-warning", onWarning)
   }, [warningDismissed])
 
-  const { data: activeConn } = useQuery<Connection | null>({
-    queryKey: ["connection", activeConnectionId],
-    queryFn: () =>
-      activeConnectionId ? (connectionsApi.get(activeConnectionId) as Promise<Connection>) : Promise.resolve(null),
-    enabled: !!activeConnectionId,
-    staleTime: 30_000,
-  })
-
   const { data: session, error: sessionError } = useQuery<ChatSession>({
     queryKey: ["session", sessionId],
     queryFn: () => queryApi.session(sessionId) as Promise<ChatSession>,
     staleTime: 60_000,
     retry: false,
   })
+
+  // The connection a question runs against is the SESSION's connection — the
+  // global app state is only a fallback (e.g. a brand-new session mid-create).
+  const connectionId = session?.connection_id ?? activeConnectionId ?? null
+
+  // Keep global state aligned with the session you're viewing so the rest of
+  // the app (switcher, banners) reflects this session's connection.
+  useEffect(() => {
+    if (session?.connection_id && session.connection_id !== activeConnectionId) {
+      setActiveConnection(session.connection_id)
+    }
+  }, [session?.connection_id, activeConnectionId, setActiveConnection])
+
+  const { data: activeConn } = useQuery<Connection | null>({
+    queryKey: ["connection", connectionId],
+    queryFn: () =>
+      connectionId ? (connectionsApi.get(connectionId) as Promise<Connection>) : Promise.resolve(null),
+    enabled: !!connectionId,
+    staleTime: 30_000,
+  })
+
+  // Never show "No connection" when the session actually has one — fall back to
+  // a neutral label while the connection's name is still loading.
+  const connectionLabel = activeConn?.name ?? (connectionId ? "Connected database" : undefined)
 
   // The session was deleted (or never existed) — don't strand the user on a
   // dead URL that would 404 every query. Bounce to a fresh chat.
@@ -177,7 +194,9 @@ export default function ChatPage({ params }: ChatPageProps) {
 
   const handleSubmit = useCallback(
     async (prompt: string) => {
-      if (!activeConnectionId) return
+      if (loading) { setSubmitError("Still answering your last question — hold on a moment."); return }
+      if (!connectionId) { setSubmitError("This chat isn't linked to a database connection. Pick a connection to ask a question."); return }
+      setSubmitError(null)
       setLoading(true)
       addUserMessage(sessionId, prompt)
       const loadingId = addLoadingMessage(sessionId)
@@ -189,50 +208,66 @@ export default function ChatPage({ params }: ChatPageProps) {
             v2SectionStart, v2CellStart, v2CellComplete, v2CellUpdate, v2Layout, v2AgentNote, v2SessionTitle, v2DocDone,
           },
           sessionId, loadingId,
-          { prompt, session_id: sessionId, connection_id: activeConnectionId },
+          { prompt, session_id: sessionId, connection_id: connectionId },
           getSignal(),
         )
         qc.invalidateQueries({ queryKey: ["session-messages", sessionId] })
         qc.invalidateQueries({ queryKey: ["sessions"] })
+      } catch (err: unknown) {
+        const apiErr = err as { message?: string } | null
+        setSubmitError(apiErr?.message ?? "Something went wrong running that query. Try again.")
       } finally {
         setLoading(false)
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeConnectionId, sessionId]
+    [connectionId, sessionId, loading]
   )
 
   const handlePanelSubmit = useCallback(
     async (text: string) => {
-      if (!activeConnectionId) return
+      if (!connectionId) { setSubmitError("This chat isn't linked to a database connection. Pick a connection to ask a question."); return }
+      setSubmitError(null)
+      // A QUICK answer must never be invisible — open the panel before it streams.
+      setRightPanel(true)
       setPanelLoading(true)
       addPanelUserMessage(sessionId, text)
-      const loadingId = addPanelLoadingMessage(sessionId)
+      // A canvas loading message so an EXTEND/REFINE from the panel renders on
+      // the canvas. QUICK produces no canvas content — we drop it afterward.
+      const canvasLoadingId = addLoadingMessage(sessionId)
+      // Parse @mentions from the text and resolve to known cells.
+      const mentionNames = Array.from(text.matchAll(/@([A-Za-z0-9_\-]+)/g)).map((m) => m[1])
+      const mentions = mentionNames
+        .map((n) => mentionCells.find((c) => c.name.toLowerCase() === n.toLowerCase())?.name)
+        .filter((name): name is string => Boolean(name))
+        .map((name) => ({ name }))
       try {
         await runStreaming(
           {
             setMessageStage, setMessagePartial, setMessagePlan, addMessageFinding,
             resolveMessage, rejectMessage,
             v2SectionStart, v2CellStart, v2CellComplete, v2CellUpdate, v2Layout, v2AgentNote, v2SessionTitle, v2DocDone,
+            resolvePanelAssistantFromStream,
           },
-          sessionId, loadingId,
-          { prompt: text, session_id: sessionId, connection_id: activeConnectionId },
+          sessionId, canvasLoadingId,
+          { prompt: text, session_id: sessionId, connection_id: connectionId, panel_mode: true, mentions },
           getSignal(),
         )
-        // Resolve panel message with the QUICK answer that arrived via panel_message SSE
-        const panelMsg = (useChatStore.getState().panelMessages[sessionId] ?? []).find(
-          (m) => m.id === loadingId
-        )
-        resolvePanelMessage(sessionId, loadingId, panelMsg?.text || "Done.")
+        // QUICK/REFINE produce no new canvas section — discard the empty
+        // canvas message so it never renders a blank card.
+        const msg = useChatStore.getState().threads[sessionId]?.find((m) => m.id === canvasLoadingId)
+        if (!msg?.document?.sections?.length) removeMessage(sessionId, canvasLoadingId)
+        qc.invalidateQueries({ queryKey: ["sessions"] })
       } catch (err: unknown) {
         const apiErr = err as { message?: string } | null
-        rejectPanelMessage(sessionId, loadingId, apiErr?.message ?? "Query failed.")
+        resolvePanelAssistantFromStream(sessionId, apiErr?.message ?? "Query failed.")
+        removeMessage(sessionId, canvasLoadingId)
       } finally {
         setPanelLoading(false)
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [activeConnectionId, sessionId]
+    [connectionId, sessionId, mentionCells]
   )
 
   const hasMessages = messages.length > 0
@@ -271,7 +306,8 @@ export default function ChatPage({ params }: ChatPageProps) {
           {hasMessages ? (
             <ChatCanvas
               messages={messages}
-              connectionName={activeConn?.name}
+              connectionName={connectionLabel}
+              connectionId={connectionId}
               onFollowUp={handleSubmit}
               onRetry={handleSubmit}
             />
@@ -281,7 +317,8 @@ export default function ChatPage({ params }: ChatPageProps) {
             onSubmit={handleSubmit}
             isLoading={loading}
             hasContent={hasMessages}
-            connectionName={activeConn?.name}
+            connectionName={connectionLabel}
+            errorMessage={submitError}
           />
         </div>
 

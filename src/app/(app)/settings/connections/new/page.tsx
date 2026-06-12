@@ -40,6 +40,9 @@ export default function NewConnectionPage() {
   const [saving, setSaving] = useState(false)
   const [savedId, setSavedId] = useState<string | null>(null)
   const [fallbackReason, setFallbackReason] = useState("")
+  // FIX 2 — one connection per database: when the backend says this database is
+  // already connected, prompt to open or replace instead of silently duplicating.
+  const [duplicate, setDuplicate] = useState<{ connectionId: string; name: string } | null>(null)
   const revealStartMs = useRef(0)
 
   const stepIndex = phase === "type" ? 0 : phase === "form" ? 1 : phase === "review" ? 2 : 3
@@ -57,7 +60,7 @@ export default function NewConnectionPage() {
 
   const handleTestSuccess = useCallback(() => setTestPassed(true), [])
 
-  const handleSave = async () => {
+  const doCreate = async (replaceExisting: boolean) => {
     setSaving(true)
     try {
       const extra_params: Record<string, unknown> = {}
@@ -71,18 +74,33 @@ export default function NewConnectionPage() {
         username: form.username,
         password: form.password,
         ssl_mode: form.ssl_mode,
+        ...(replaceExisting ? { replace_existing: true } : {}),
         ...(Object.keys(extra_params).length > 0 ? { extra_params } : {}),
       }) as { id: string }
+      setDuplicate(null)
       setSavedId(conn.id)
       setActiveConnection(conn.id)
       await qc.invalidateQueries({ queryKey: ["connections"] })
       setPhase("progress")
     } catch (err: unknown) {
-      const e = err as { message?: string }
-      toast.error(e.message || "Failed to save connection.")
+      const e = err as { error_type?: string; message?: string; connection_id?: string; name?: string }
+      if (e.error_type === "ALREADY_CONNECTED" && e.connection_id) {
+        setDuplicate({ connectionId: e.connection_id, name: e.name || "this database" })
+      } else {
+        toast.error(e.message || "Failed to save connection.")
+      }
     } finally {
       setSaving(false)
     }
+  }
+
+  const handleSave = () => doCreate(false)
+
+  const handleOpenExisting = () => {
+    if (!duplicate) return
+    setActiveConnection(duplicate.connectionId)
+    setDuplicate(null)
+    router.push("/dashboard")
   }
 
   const handleProgressComplete = useCallback((insightsCount: number, requiresConfirmation: boolean) => {
@@ -185,6 +203,40 @@ export default function NewConnectionPage() {
           />
         )}
       </div>
+
+      {/* FIX 2 — duplicate database prompt: open the existing one or replace it */}
+      {duplicate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-6 shadow-xl">
+            <h3 className="text-base font-semibold text-[var(--text)]">This database is already connected</h3>
+            <p className="mt-2 text-sm leading-relaxed text-[var(--text-dim)]">
+              It&apos;s already connected as <strong>{duplicate.name}</strong>. You can open the existing
+              connection, or replace it to re-onboard with these credentials — no duplicate will be created.
+            </p>
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                onClick={() => setDuplicate(null)}
+                className="rounded-lg px-3 py-2 text-sm text-[var(--text-muted)] hover:bg-[var(--surface-2)] transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleOpenExisting}
+                className="rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--text)] hover:border-brand hover:text-brand transition-colors"
+              >
+                Open existing
+              </button>
+              <button
+                onClick={() => doCreate(true)}
+                disabled={saving}
+                className="rounded-lg bg-brand px-3 py-2 text-sm font-medium text-white hover:bg-brand/90 transition-colors disabled:opacity-50"
+              >
+                {saving ? "Replacing…" : "Replace"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

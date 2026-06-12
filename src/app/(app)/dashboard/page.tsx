@@ -132,6 +132,11 @@ export default function DashboardPage() {
     onSuccess: (d) => qc.setQueryData(["briefing", activeConn?.id], d),
   })
 
+  // FIX 1 — stale-model trap: re-run the verification pipeline.
+  const reverifyMut = useMutation({
+    mutationFn: () => connectionsApi.retryPipeline(activeConn!.id),
+  })
+
   const ask = (q?: string) => {
     if (!activeConn) return
     const text = (q ?? question).trim()
@@ -156,6 +161,7 @@ export default function DashboardPage() {
   }
 
   const noDefinition = !!brief && brief.status === "no_definition"
+  const needsReverify = !!brief && brief.status === "needs_reverification"
 
   return (
     <div className="h-full overflow-y-auto p-6">
@@ -197,6 +203,12 @@ export default function DashboardPage() {
 
         {loadingBrief && !brief ? (
           <BriefingSkeleton />
+        ) : needsReverify ? (
+          <EmptyState icon={AlertTriangle}
+            heading="This connection needs re-verification"
+            body="Querify's schema understanding was upgraded since this connection's model was built. Re-verify to refresh how your measures are defined — until then the briefing is paused so it never shows numbers from the older model."
+            ctaLabel={reverifyMut.isSuccess ? "Re-verification started" : "Re-verify connection"}
+            onCta={() => reverifyMut.mutate()} className="max-w-md" />
         ) : noDefinition ? (
           <EmptyState icon={Database} heading="Your briefing is still being set up"
             body="We haven't found business metrics for this connection yet. Ask a question above to explore your data, or check back in a moment."
@@ -207,6 +219,22 @@ export default function DashboardPage() {
             {visibleKpis.length > 0 && (
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 {visibleKpis.map((k) => <BriefingKpiCard key={k.id} kpi={k} onExplore={(q) => ask(q)} />)}
+              </div>
+            )}
+
+            {/* FIX 3 — flagged measures: small "needs verification" tiles, never heroes */}
+            {!!brief?.needs_verification?.length && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {brief.needs_verification.map((nv, i) => (
+                  <div key={i} className="rounded-lg border border-amber-300/70 bg-amber-50/60 dark:bg-amber-950/20 px-3.5 py-3">
+                    <div className="flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                      <AlertTriangle size={12} className="shrink-0" />
+                      <span className="truncate">{nv.label}</span>
+                      <span className="ml-auto shrink-0 text-[10px] uppercase tracking-wide text-amber-600/80">Needs verification</span>
+                    </div>
+                    <p className="mt-1 text-xs leading-snug text-[var(--text-muted)]">{nv.reason}</p>
+                  </div>
+                ))}
               </div>
             )}
 
