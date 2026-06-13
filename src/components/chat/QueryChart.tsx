@@ -136,6 +136,11 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
 
   const emphasis = useMemo(() => new Set(config.emphasis_points ?? []), [config.emphasis_points])
 
+  // A value series fed to a numeric axis MUST be numeric. Pointing one at a
+  // non-numeric column gives recharts a NaN domain whose tick computation can
+  // spin the page to "unresponsive". One predicate, shared by every branch.
+  const hasNumericValues = (f: string) => !!f && data.some((d) => toNum(d[f]) !== null)
+
   const barFill = (i: number, value: unknown): string => {
     if (scheme === "good_bad") return (toNum(value) ?? 0) >= 0 ? SUCCESS : DANGER
     if (emphasis.has(i)) return BRAND
@@ -196,6 +201,22 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
   const t = config.type
   let chart: React.ReactNode = null
 
+  // Universal freeze guard. Bar types repair-or-bail in their own branch below;
+  // gauge clamps a single value and histogram bins numerics (both safe). Every
+  // other type drives its value series onto a numeric axis — if none of those
+  // series is numeric (a mis-mapped or legacy chart_config), bail to a safe
+  // placeholder instead of handing recharts a NaN domain that hangs the tab.
+  const quantFields = (
+    t === "scatter"
+      ? [x, yFields[1] || config.y_axis || yPrimary]
+      : t === "bar" || t === "horizontal_bar" || t === "bar_horizontal" || t === "gauge" || t === "histogram"
+        ? []
+        : yFields
+  ).filter((f): f is string => !!f)
+  if (quantFields.length && !quantFields.every(hasNumericValues)) {
+    return <p className="text-xs text-ink-dim py-2">Not enough data to display this chart.</p>
+  }
+
   if (t === "line" || t === "sparkline") {
     const isSpark = t === "sparkline"
     chart = (
@@ -233,7 +254,6 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
   } else if (t === "bar" || t === "horizontal_bar" || t === "bar_horizontal") {
     // Honor an explicit horizontal orientation even when type is a bare "bar".
     const horizontal = t !== "bar" || config.orientation === "horizontal"
-    const numericField = (f: string) => !!f && data.some((d) => toNum(d[f]) !== null)
     // Derive the value (numeric, the bars) and category fields from the DATA
     // rather than trusting x_field/y_field. Legacy/mis-mapped configs swap them
     // (e.g. value on x_field, label on y_field); pointing the bar series at a
@@ -241,13 +261,13 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
     // spin the page to "unresponsive". Pick whichever field is actually numeric.
     let valField = yPrimary
     let catField = x
-    if (!numericField(valField) && numericField(catField)) {
+    if (!hasNumericValues(valField) && hasNumericValues(catField)) {
       valField = x
       catField = yPrimary
     }
     // Guard: if neither field is numeric there's nothing to chart — bail to the
     // placeholder instead of handing recharts a degenerate (NaN) domain.
-    if (!numericField(valField)) {
+    if (!hasNumericValues(valField)) {
       return <p className="text-xs text-ink-dim py-2">Not enough data to display this chart.</p>
     }
     // U4 — ranking: highlight the leader in --chart-1, mute the rest to 55%.

@@ -439,8 +439,13 @@ export function InsightDetailChart({ insight, modalOpen }: InsightDetailChartPro
 
   const title = config?.title || insight.headline
 
+  // A value series fed to a numeric axis MUST be numeric — a non-numeric series
+  // gives recharts a NaN domain whose tick computation hangs the page. One guard
+  // for every sub-chart below (they all plot `yKey` on a numeric axis).
+  const valueNumeric = chartRowsRaw.length === 0 || chartRowsRaw.some((r) => asNum(r[yKey]) !== undefined)
+
   const body =
-    merged.length < 2 ? (
+    merged.length < 2 || !valueNumeric ? (
       <div className="flex h-[320px] items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface-2)] text-sm text-[var(--text-muted)] px-6 text-center">Not enough chart data points to display — at least two are required.</div>
     ) : (
       <div className="relative">
