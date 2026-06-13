@@ -231,18 +231,27 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
       </ResponsiveContainer>
     )
   } else if (t === "bar" || t === "horizontal_bar" || t === "bar_horizontal") {
-    // Honor an explicit horizontal orientation even when type is a bare "bar"
-    // (some configs express direction via `orientation`, not `type`).
+    // Honor an explicit horizontal orientation even when type is a bare "bar".
     const horizontal = t !== "bar" || config.orientation === "horizontal"
-    // Guard: a bar series MUST be numeric. A non-numeric value field (e.g. a
-    // mis-mapped config pointing bars at a label column) gives recharts a NaN
-    // domain and its tick computation can spin the page to "unresponsive".
-    const barNumeric = data.some((d) => toNum(d[yPrimary]) !== null)
-    if (!barNumeric) {
+    const numericField = (f: string) => !!f && data.some((d) => toNum(d[f]) !== null)
+    // Derive the value (numeric, the bars) and category fields from the DATA
+    // rather than trusting x_field/y_field. Legacy/mis-mapped configs swap them
+    // (e.g. value on x_field, label on y_field); pointing the bar series at a
+    // non-numeric column gives recharts a NaN domain whose tick computation can
+    // spin the page to "unresponsive". Pick whichever field is actually numeric.
+    let valField = yPrimary
+    let catField = x
+    if (!numericField(valField) && numericField(catField)) {
+      valField = x
+      catField = yPrimary
+    }
+    // Guard: if neither field is numeric there's nothing to chart — bail to the
+    // placeholder instead of handing recharts a degenerate (NaN) domain.
+    if (!numericField(valField)) {
       return <p className="text-xs text-ink-dim py-2">Not enough data to display this chart.</p>
     }
     // U4 — ranking: highlight the leader in --chart-1, mute the rest to 55%.
-    const leaderIdx = data.reduce((best, d, i) => ((toNum(d[yPrimary]) ?? -Infinity) > (toNum(data[best]?.[yPrimary]) ?? -Infinity) ? i : best), 0)
+    const leaderIdx = data.reduce((best, d, i) => ((toNum(d[valField]) ?? -Infinity) > (toNum(data[best]?.[valField]) ?? -Infinity) ? i : best), 0)
     const isRanking = horizontal && scheme !== "good_bad" && scheme !== "categorical" && !emphasis.size
     chart = (
       <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
@@ -250,16 +259,24 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
           <CartesianGrid stroke={gridStroke} horizontal={!horizontal} vertical={horizontal} />
           {horizontal ? (
             <>
-              <XAxis type="number" tick={axisTick} tickLine={false} axisLine={false} tickMargin={TICK_MARGIN} tickFormatter={(v: unknown) => formatAxis(v, yPrimary)} />
-              <YAxis type="category" dataKey={x} tick={axisTick} tickLine={false} axisLine={false} width={110} tickMargin={TICK_MARGIN} tickFormatter={(v: unknown) => truncate(String(v), 16)} />
+              <XAxis type="number" tick={axisTick} tickLine={false} axisLine={false} tickMargin={TICK_MARGIN} tickFormatter={(v: unknown) => formatAxis(v, valField)} />
+              <YAxis type="category" dataKey={catField} tick={axisTick} tickLine={false} axisLine={false} width={110} tickMargin={TICK_MARGIN} tickFormatter={(v: unknown) => truncate(String(v), 16)} />
             </>
-          ) : (<>{xAxis}{yAxis}</>)}
+          ) : (
+            <>
+              <XAxis dataKey={catField} tick={axisTick} tickLine={false} axisLine={false} tickMargin={TICK_MARGIN} interval="preserveStartEnd"
+                angle={data.length > 8 ? -35 : 0} textAnchor={data.length > 8 ? "end" : "middle"} height={data.length > 8 ? 56 : 30}
+                tickFormatter={(v: unknown) => truncate(String(v), 12)} />
+              <YAxis tick={axisTick} tickLine={false} axisLine={false} width={60} tickMargin={TICK_MARGIN}
+                tickFormatter={(v: unknown) => formatAxis(v, valField)} />
+            </>
+          )}
           {TooltipEl}
-          <Bar dataKey={yPrimary} name={humanize(yPrimary)} radius={horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} isAnimationActive={mounted}>
+          <Bar dataKey={valField} name={humanize(valField)} radius={horizontal ? [0, 4, 4, 0] : [4, 4, 0, 0]} isAnimationActive={mounted}>
             {data.map((d, i) => (
               isRanking
                 ? <Cell key={i} fill={EMPHASIS} fillOpacity={i === leaderIdx ? 1 : 0.55} />
-                : <Cell key={i} fill={barFill(i, d[yPrimary])} />
+                : <Cell key={i} fill={barFill(i, d[valField])} />
             ))}
           </Bar>
         </BarChart>
