@@ -110,7 +110,11 @@ export function TableCell({ cell, messageId }: Props) {
 
   // Build TanStack columns — HUMANIZED headers via labelize() (snake_case and
   // raw table names are banned from headers).
-  const columns: ColumnDef<Record<string, unknown>>[] = displayCols.map((col) => ({
+  // TanStack re-derives its row model whenever `columns`/`data` change by
+  // REFERENCE. Rebuilding these arrays every render fed it new references each
+  // time, which on a prop/state change (e.g. switching sessions) drove it into a
+  // re-render loop that pegged the main thread. Memoize so identity is stable.
+  const columns = useMemo<ColumnDef<Record<string, unknown>>[]>(() => displayCols.map((col) => ({
     id: col,
     accessorKey: col,
     header: labelize(col),
@@ -131,13 +135,13 @@ export function TableCell({ cell, messageId }: Props) {
         </span>
       )
     },
-  }))
+  })), [displayCols])
 
-  const tableData: Record<string, unknown>[] = displayRows.map((row) => {
+  const tableData = useMemo<Record<string, unknown>[]>(() => displayRows.map((row) => {
     const obj: Record<string, unknown> = {}
     displayCols.forEach((col, i) => { obj[col] = (row as unknown[])[i] })
     return obj
-  })
+  }), [displayCols, displayRows])
 
   const numericCols = useMemo(() => {
     const out = new Set<string>()
