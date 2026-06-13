@@ -231,7 +231,16 @@ export const QueryChart = ({ config, rows }: QueryChartProps) => {
       </ResponsiveContainer>
     )
   } else if (t === "bar" || t === "horizontal_bar" || t === "bar_horizontal") {
-    const horizontal = t !== "bar"
+    // Honor an explicit horizontal orientation even when type is a bare "bar"
+    // (some configs express direction via `orientation`, not `type`).
+    const horizontal = t !== "bar" || config.orientation === "horizontal"
+    // Guard: a bar series MUST be numeric. A non-numeric value field (e.g. a
+    // mis-mapped config pointing bars at a label column) gives recharts a NaN
+    // domain and its tick computation can spin the page to "unresponsive".
+    const barNumeric = data.some((d) => toNum(d[yPrimary]) !== null)
+    if (!barNumeric) {
+      return <p className="text-xs text-ink-dim py-2">Not enough data to display this chart.</p>
+    }
     // U4 — ranking: highlight the leader in --chart-1, mute the rest to 55%.
     const leaderIdx = data.reduce((best, d, i) => ((toNum(d[yPrimary]) ?? -Infinity) > (toNum(data[best]?.[yPrimary]) ?? -Infinity) ? i : best), 0)
     const isRanking = horizontal && scheme !== "good_bad" && scheme !== "categorical" && !emphasis.size
