@@ -8,9 +8,9 @@ const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
 function getToken(): string | null {
   if (typeof window === "undefined") return null
   try {
-    const raw = localStorage.getItem("querify-auth")
-    if (!raw) return null
-    return (JSON.parse(raw) as { state?: { accessToken?: string } }).state?.accessToken ?? null
+    // access token is in-memory (zustand), never localStorage
+    const { useAuthStore } = require("@/store/authStore")
+    return useAuthStore.getState().accessToken ?? null
   } catch {
     return null
   }

@@ -107,6 +107,13 @@ function _updateSection(
   sectionId: string,
   updater: (sec: AnswerSection) => AnswerSection,
 ): AnswerDocument {
+  // Robust against out-of-order streaming: if the section hasn't arrived yet
+  // (a cell_complete before its section_start — reordered/re-sent frame), create
+  // it on the fly rather than dropping the cell silently.
+  if (!doc.sections.some((s) => s.id === sectionId)) {
+    const created: AnswerSection = { id: sectionId, question: "", cells: [], agent_notes: [] }
+    return { ...doc, sections: [...doc.sections, updater(created)] }
+  }
   return {
     ...doc,
     sections: doc.sections.map((s) => (s.id === sectionId ? updater(s) : s)),
@@ -334,10 +341,20 @@ export const useChatStore = create<ChatState>((set) => ({
     set((s) => ({
       threads: {
         ...s.threads,
-        [sessionId]: _updateMessageDoc(s.threads[sessionId] ?? [], tempId, (doc) => ({
-          ...doc,
-          sections: [...doc.sections, { id: sectionId, question, cells: [], agent_notes: [] }],
-        })),
+        [sessionId]: _updateMessageDoc(s.threads[sessionId] ?? [], tempId, (doc) => {
+          // dedupe: a re-sent section_start (or one that raced a cell_complete
+          // that already created the section) must not push a duplicate — fill in
+          // the question on the existing one instead.
+          const existing = doc.sections.find((sec) => sec.id === sectionId)
+          if (existing) {
+            return {
+              ...doc,
+              sections: doc.sections.map((sec) =>
+                sec.id === sectionId ? { ...sec, question: sec.question || question } : sec),
+            }
+          }
+          return { ...doc, sections: [...doc.sections, { id: sectionId, question, cells: [], agent_notes: [] }] }
+        }),
       },
       agentFeeds: _appendFeed(s.agentFeeds, sessionId, { t: "question", sectionId, text: question }),
     }))

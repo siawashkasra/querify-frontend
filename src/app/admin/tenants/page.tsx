@@ -140,13 +140,7 @@ export default function TenantsPage() {
     const exportParams = new URLSearchParams(params)
     exportParams.delete("page")
     exportParams.delete("page_size")
-    const token = (() => {
-      try {
-        const raw = localStorage.getItem("querify-auth")
-        if (!raw) return null
-        return (JSON.parse(raw) as { state?: { accessToken?: string } }).state?.accessToken ?? null
-      } catch { return null }
-    })()
+    const token = (() => { try { return (require("@/store/authStore").useAuthStore).getState().accessToken ?? null } catch { return null } })()
     const url = `${adminApi.exportTenantsUrl()}?${exportParams}${token ? `&token=${token}` : ""}`
     window.open(url, "_blank")
   }

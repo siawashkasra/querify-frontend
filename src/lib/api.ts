@@ -85,6 +85,8 @@ const http = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000",
   timeout: 30000,
   headers: { "Content-Type": "application/json" },
+  // send the httpOnly refresh cookie on cross-origin auth calls
+  withCredentials: true,
 })
 
 // ── Request interceptor: attach X-Request-ID and Bearer token ─────────────────
@@ -145,18 +147,17 @@ http.interceptors.response.use(
 
       try {
         const { useAuthStore } = require("@/store/authStore")
-        const refreshToken: string | null = useAuthStore.getState().refreshToken
 
-        if (!refreshToken) throw new Error("No refresh token")
-
+        // the refresh token rides in the httpOnly cookie (withCredentials), never
+        // in the body — nothing to read from the store.
         const refreshResp = await axios.post<TokenPair>(
           `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/api/v1/auth/refresh`,
-          { refresh_token: refreshToken },
-          { headers: { "Content-Type": "application/json" } }
+          {},
+          { headers: { "Content-Type": "application/json" }, withCredentials: true }
         )
 
-        const { access_token, refresh_token } = refreshResp.data
-        useAuthStore.getState().setTokens(access_token, refresh_token)
+        const { access_token } = refreshResp.data
+        useAuthStore.getState().setTokens(access_token)
         try {
           const base64 = access_token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")
           const payload = JSON.parse(atob(base64))
@@ -277,8 +278,8 @@ export const auth = {
     post<void>("/api/v1/auth/forgot-password", { email }),
   resetPassword: (token: string, new_password: string) =>
     post<TokenPair>("/api/v1/auth/reset-password", { token, new_password }),
-  logout: (refresh_token: string) =>
-    post<void>("/api/v1/auth/logout", { refresh_token }),
+  logout: () =>
+    post<void>("/api/v1/auth/logout", {}),   // refresh token read from the httpOnly cookie
   acceptInvite: (token: string) =>
     post<{
       requires_password_setup: boolean

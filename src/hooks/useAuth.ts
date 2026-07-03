@@ -21,7 +21,8 @@ export function useAuth() {
 
   const establishSession = useCallback(
     async (tokens: TokenPair) => {
-      setTokens(tokens.access_token, tokens.refresh_token)
+      // access token → memory; refresh token was set as an httpOnly cookie by the backend
+      setTokens(tokens.access_token)
       const payload = decodeJwtPayload(tokens.access_token)
       if (payload.tenant_id && payload.role !== undefined) {
         setTenantContext(
@@ -37,9 +38,8 @@ export function useAuth() {
   )
 
   const logout = useCallback(async () => {
-    const refreshToken = useAuthStore.getState().refreshToken
     try {
-      if (refreshToken) await auth.logout(refreshToken)
+      await auth.logout()   // backend reads the refresh cookie, blacklists + clears it
     } catch {
       // ignore backend errors on logout
     }

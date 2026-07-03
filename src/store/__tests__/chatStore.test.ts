@@ -12,7 +12,7 @@ const TEMP = "tmp-1"
 const SEC = "sec-1"
 
 function cell(id: string, kind: AnswerCellKind, extra: Partial<AnswerCell> = {}): AnswerCell {
-  return { id, name: id, kind, title: kind, status: "complete", section_id: SEC, ...extra } as AnswerCell
+  return { id, name: id, kind, status: "complete", section_id: SEC, order: 0, ...extra } as AnswerCell
 }
 
 function doc() {
@@ -49,11 +49,11 @@ describe("chatStore v2 reducers", () => {
   it("cell_complete is idempotent — same id replaces, never duplicates", () => {
     const st = useChatStore.getState()
     st.v2SectionStart(S, TEMP, SEC, "q")
-    st.v2CellComplete(S, TEMP, cell("c-chart", "chart", { title: "v1" }))
-    st.v2CellComplete(S, TEMP, cell("c-chart", "chart", { title: "v2" }))
+    st.v2CellComplete(S, TEMP, cell("c-chart", "chart", { name: "v1" }))
+    st.v2CellComplete(S, TEMP, cell("c-chart", "chart", { name: "v2" }))
     const cells = doc()?.sections[0].cells ?? []
     expect(cells.filter((c) => c.id === "c-chart")).toHaveLength(1)
-    expect(cells[0].title).toBe("v2")
+    expect(cells[0].name).toBe("v2")
   })
 
   it("rehydration parity: the document round-trips through JSON unchanged", () => {
@@ -71,11 +71,33 @@ describe("chatStore v2 reducers", () => {
   it("cell_update (REFINE) replaces a cell by id in place", () => {
     const st = useChatStore.getState()
     st.v2SectionStart(S, TEMP, SEC, "q")
-    st.v2CellComplete(S, TEMP, cell("c-chart", "chart", { title: "old" }))
-    st.v2CellUpdate(S, TEMP, cell("c-chart", "chart", { title: "refined" }))
+    st.v2CellComplete(S, TEMP, cell("c-chart", "chart", { name: "old" }))
+    st.v2CellUpdate(S, TEMP, cell("c-chart", "chart", { name: "refined" }))
     const cells = doc()?.sections[0].cells ?? []
     expect(cells).toHaveLength(1)
-    expect(cells[0].title).toBe("refined")
+    expect(cells[0].name).toBe("refined")
+  })
+
+  it("out-of-order: a cell_complete before its section_start is not dropped", () => {
+    const st = useChatStore.getState()
+    // cell arrives BEFORE the section — the section is created on the fly
+    st.v2CellComplete(S, TEMP, cell("c-early", "chart"))
+    let cells = doc()?.sections[0]?.cells ?? []
+    expect(cells.map((c) => c.id)).toContain("c-early")
+    // the later section_start fills in the question without dropping the cell
+    st.v2SectionStart(S, TEMP, SEC, "top products")
+    expect(doc()?.sections).toHaveLength(1)
+    expect(doc()?.sections[0].question).toBe("top products")
+    cells = doc()?.sections[0]?.cells ?? []
+    expect(cells.map((c) => c.id)).toContain("c-early")
+  })
+
+  it("duplicate section_start does not create a duplicate section", () => {
+    const st = useChatStore.getState()
+    st.v2SectionStart(S, TEMP, SEC, "q")
+    st.v2SectionStart(S, TEMP, SEC, "q-again")
+    expect(doc()?.sections).toHaveLength(1)
+    expect(doc()?.sections[0].question).toBe("q")   // first question kept
   })
 
   it("doc_done attaches follow-ups and completion text", () => {
