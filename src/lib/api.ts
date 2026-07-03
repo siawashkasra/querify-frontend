@@ -732,4 +732,66 @@ export const billing = {
     ),
 }
 
+// ── Glossary API (W4) ─────────────────────────────────────────────────────────
+
+export interface GlossaryEntry {
+  id: string
+  kind: "synonym" | "definition" | "setting"
+  term: string
+  maps_to: string
+  source: string
+  status: string
+}
+
+export const glossary = {
+  list: (connectionId: string) =>
+    get<GlossaryEntry[]>(`/api/v1/glossary/${connectionId}`),
+  add: (connectionId: string, data: { kind: string; term: string; maps_to: string }) =>
+    post<GlossaryEntry>(`/api/v1/glossary/${connectionId}`, data),
+  remove: (connectionId: string, entryId: string) =>
+    del<{ deleted: boolean }>(`/api/v1/glossary/${connectionId}/${entryId}`),
+  setFiscal: (connectionId: string, fiscal_year_start_month: number) =>
+    put<{ fiscal_year_start_month: number }>(
+      `/api/v1/glossary/${connectionId}/fiscal`, { fiscal_year_start_month }),
+}
+
+// ── Notifications API (W5) ────────────────────────────────────────────────────
+
+export interface AlertRule {
+  id: string
+  measure: string
+  condition: { basis: string; op: string; value: number; window?: string; change_basis?: string }
+  cadence: string
+  state: string
+  enabled: boolean
+}
+
+export interface BriefingSubscription {
+  enabled: boolean
+  cadence?: string
+  hour?: number
+  timezone?: string
+}
+
+export const notifications = {
+  listRules: (connectionId: string) =>
+    get<AlertRule[]>(`/api/v1/notifications/${connectionId}/rules`),
+  createRule: (connectionId: string, data: { measure: string; condition: AlertRule["condition"]; cadence?: string }) =>
+    post<AlertRule>(`/api/v1/notifications/${connectionId}/rules`, data),
+  deleteRule: (connectionId: string, ruleId: string) =>
+    del<{ deleted: boolean }>(`/api/v1/notifications/${connectionId}/rules/${ruleId}`),
+  getBriefing: (connectionId: string) =>
+    get<BriefingSubscription>(`/api/v1/notifications/${connectionId}/briefing-subscription`),
+  setBriefing: (connectionId: string, data: { cadence: string; hour: number; timezone: string; enabled: boolean }) =>
+    put<BriefingSubscription>(`/api/v1/notifications/${connectionId}/briefing-subscription`, data),
+}
+
+// ── Share API (W6) ────────────────────────────────────────────────────────────
+
+export const share = {
+  create: (data: { session_id: string; message_id?: string; section_id?: string; expiry_days?: number }) =>
+    post<{ token: string; url: string; expires_at: string | null }>("/api/v1/share", data),
+  revoke: (token: string) => del<{ revoked: boolean }>(`/api/v1/share/${token}`),
+}
+
 export default http
