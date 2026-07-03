@@ -9,7 +9,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { toast } from "react-hot-toast"
 import { Bell, Mail, Plus, Trash2 } from "lucide-react"
 import { notifications as notifApi, connections as connectionsApi } from "@/lib/api"
-import type { AlertRule, BriefingSubscription, Connection } from "@/lib/api"
+import type { AlertRule, BriefingSubscription } from "@/lib/api"
+import type { Connection } from "@/types"
 import Button from "@/components/ui/Button"
 import Input from "@/components/ui/Input"
 
@@ -18,7 +19,8 @@ export default function NotificationsPage() {
   const { data: conns } = useQuery<Connection[]>({
     queryKey: ["connections"], queryFn: () => connectionsApi.list(), staleTime: 60_000,
   })
-  const connId = conns?.[0]?.id ?? null
+  const [selectedConn, setSelectedConn] = useState<string | null>(null)
+  const connId = selectedConn ?? conns?.[0]?.id ?? null
 
   const { data: sub } = useQuery<BriefingSubscription>({
     queryKey: ["briefing-sub", connId],
@@ -55,9 +57,20 @@ export default function NotificationsPage() {
 
   return (
     <div className="max-w-2xl space-y-8">
-      <header className="flex items-center gap-2">
-        <Bell className="h-5 w-5" />
-        <h1 className="text-lg font-semibold">Notifications</h1>
+      <header className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Bell className="h-5 w-5" />
+          <h1 className="text-lg font-semibold">Notifications</h1>
+        </div>
+        {conns && conns.length > 1 && (
+          <select
+            className="rounded border px-2 py-1 text-sm"
+            value={connId ?? ""}
+            onChange={(e) => setSelectedConn(e.target.value)}
+          >
+            {conns.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        )}
       </header>
 
       <section className="space-y-2">

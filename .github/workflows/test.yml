@@ -26,11 +26,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Unit tests (vitest)
-        run: npm test
+      - name: Typecheck
+        run: npx tsc --noEmit
 
-      - name: Label sweep (no raw identifiers rendered)
-        run: npm run check:labels
+      - name: Unit tests (vitest)
+        # includes the labelize sweep (src/lib/__tests__/labelize.test.ts) — the
+        # real test against src/lib/labelize.ts replaced the drift-prone mirror.
+        run: npm test
 
       - name: Lint
         # non-blocking, mirrors the backend ruff step — surfaces issues without
