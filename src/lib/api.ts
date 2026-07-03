@@ -755,4 +755,35 @@ export const glossary = {
       `/api/v1/glossary/${connectionId}/fiscal`, { fiscal_year_start_month }),
 }
 
+// ── Notifications API (W5) ────────────────────────────────────────────────────
+
+export interface AlertRule {
+  id: string
+  measure: string
+  condition: { basis: string; op: string; value: number; window?: string; change_basis?: string }
+  cadence: string
+  state: string
+  enabled: boolean
+}
+
+export interface BriefingSubscription {
+  enabled: boolean
+  cadence?: string
+  hour?: number
+  timezone?: string
+}
+
+export const notifications = {
+  listRules: (connectionId: string) =>
+    get<AlertRule[]>(`/api/v1/notifications/${connectionId}/rules`),
+  createRule: (connectionId: string, data: { measure: string; condition: AlertRule["condition"]; cadence?: string }) =>
+    post<AlertRule>(`/api/v1/notifications/${connectionId}/rules`, data),
+  deleteRule: (connectionId: string, ruleId: string) =>
+    del<{ deleted: boolean }>(`/api/v1/notifications/${connectionId}/rules/${ruleId}`),
+  getBriefing: (connectionId: string) =>
+    get<BriefingSubscription>(`/api/v1/notifications/${connectionId}/briefing-subscription`),
+  setBriefing: (connectionId: string, data: { cadence: string; hour: number; timezone: string; enabled: boolean }) =>
+    put<BriefingSubscription>(`/api/v1/notifications/${connectionId}/briefing-subscription`, data),
+}
+
 export default http
