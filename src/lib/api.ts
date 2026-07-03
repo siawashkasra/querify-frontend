@@ -732,4 +732,27 @@ export const billing = {
     ),
 }
 
+// ── Glossary API (W4) ─────────────────────────────────────────────────────────
+
+export interface GlossaryEntry {
+  id: string
+  kind: "synonym" | "definition" | "setting"
+  term: string
+  maps_to: string
+  source: string
+  status: string
+}
+
+export const glossary = {
+  list: (connectionId: string) =>
+    get<GlossaryEntry[]>(`/api/v1/glossary/${connectionId}`),
+  add: (connectionId: string, data: { kind: string; term: string; maps_to: string }) =>
+    post<GlossaryEntry>(`/api/v1/glossary/${connectionId}`, data),
+  remove: (connectionId: string, entryId: string) =>
+    del<{ deleted: boolean }>(`/api/v1/glossary/${connectionId}/${entryId}`),
+  setFiscal: (connectionId: string, fiscal_year_start_month: number) =>
+    put<{ fiscal_year_start_month: number }>(
+      `/api/v1/glossary/${connectionId}/fiscal`, { fiscal_year_start_month }),
+}
+
 export default http
