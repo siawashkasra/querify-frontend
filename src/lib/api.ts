@@ -786,4 +786,12 @@ export const notifications = {
     put<BriefingSubscription>(`/api/v1/notifications/${connectionId}/briefing-subscription`, data),
 }
 
+// ── Share API (W6) ────────────────────────────────────────────────────────────
+
+export const share = {
+  create: (data: { session_id: string; message_id?: string; section_id?: string; expiry_days?: number }) =>
+    post<{ token: string; url: string; expires_at: string | null }>("/api/v1/share", data),
+  revoke: (token: string) => del<{ revoked: boolean }>(`/api/v1/share/${token}`),
+}
+
 export default http
