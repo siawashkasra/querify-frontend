@@ -1,0 +1,38 @@
+name: Frontend Tests
+
+# Z5 — the frontend guarantees defend themselves in CI. vitest (store reducers,
+# chart-cell presence + rehydration, labelize sweep) and the raw-name label check
+# run on every push/PR touching the frontend; a red suite blocks merge.
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: ["**"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Unit tests (vitest)
+        run: npm test
+
+      - name: Label sweep (no raw identifiers rendered)
+        run: npm run check:labels
+
+      - name: Lint
+        # non-blocking, mirrors the backend ruff step — surfaces issues without
+        # gating merges on style.
+        run: npm run lint || true
