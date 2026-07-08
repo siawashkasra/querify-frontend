@@ -31,7 +31,12 @@ const MAIN_MESSAGES: Record<string, string> = {
 }
 
 const POLL_MS = 2000
-const TIMEOUT_MS = 100_000
+// Onboarding a wide schema runs an LLM context + hypothesis pass (reasoning model) plus
+// value-grounded verification probes — a large DB legitimately takes >2min. The poll only
+// gives up (shows the fallback) well past the realistic completion time, so a slow-but-
+// successful onboard is never falsely reported as failed. The backend still emits a real
+// 'failed' stage on genuine failure, which ends the poll immediately regardless of this.
+const TIMEOUT_MS = 240_000
 
 export interface OnboardingProgressProps {
   connectionId: string
