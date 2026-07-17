@@ -106,8 +106,11 @@ export function ChatCanvas({ messages, connectionName, connectionId, onFollowUp,
           // ── Assistant response ───────────────────────────────────────────
           const prevUser = messages.slice(0, idx).reverse().find((m) => m.role === "user")
 
-          // 1. v2 document (live streaming or rehydrated)
-          if (msg.document?.sections?.length) {
+          // 1. v2 document (live streaming or rehydrated).
+          // A declined/clarify result emits section_start (creating an EMPTY section) but never
+          // adds cells, so rendering the doc would show a blank screen — fall through to the
+          // clarify card below instead. Only genuine declines skip the doc (they have no content).
+          if (msg.document?.sections?.length && _declineText(msg) === null) {
             return (
               <div key={msg.id}>
                 <SessionCanvas
